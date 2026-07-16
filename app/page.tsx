@@ -7,10 +7,8 @@ const categories = [
 ];
 
 const products = [
-  { name: "Rose Noor Anarkali Set", type: "Festive edit · Hand embroidery", price: "₹6,499", old: "₹8,999", img: "/product.jpg", badge: "Bestseller" },
-  { name: "Mehreen Anarkali Set", type: "Dusk blue · Occasion wear", price: "₹6,299", img: "/product.jpg", position: "35%" },
-  { name: "Zehra Sharara Set", type: "Blush pink · New arrival", price: "₹5,999", img: "/product.jpg", position: "65%" },
-  { name: "Noor-e-Khaas Set", type: "Midnight blue · Festive", price: "₹6,799", img: "/product.jpg", position: "82%" },
+  { name: "Rose Pink Blazer Co-ord", type: "Blush tailored · New arrival", price: "₹4,999", img: "/coord-set.jpg", badge: "New", href: "/product/rose-pink-co-ord-set" },
+  { name: "Ivory Power Suit Co-ord", type: "Double-breasted · New arrival", price: "₹5,499", img: "/coord-ivory.jpg", badge: "New", href: "/product/ivory-double-breasted-co-ord-set" },
 ];
 
 export default function Home() {
@@ -26,10 +24,10 @@ export default function Home() {
     <main>
       <div className="shipping">✦ &nbsp; FREE SHIPPING ON ORDERS ABOVE ₹2999 &nbsp; ✦</div>
       <header className="nav">
-        <button className="icon-button menu-trigger" aria-label="Open menu" onClick={() => setMenuOpen(true)}><span>☰</span></button>
+        <button className="icon-button menu-trigger" aria-label="Open menu" onClick={() => setMenuOpen(true)}><span className="modern-menu"><i/><i/><i/></span></button>
         <a className="logo" href="#top">Carnival of Clothes <small>by nandini ♡</small></a>
         <nav className="links"><a href="#collections">Collections</a><a href="#shop">Shop</a><a href="#story">Our Story</a><a href="#contact">Contact</a></nav>
-        <div className="actions"><button className="icon-button" aria-label="Search" onClick={() => setSearch(!search)}>⌕</button><button className="icon-button" aria-label="Wishlist">♡</button><button className="bag" aria-label="Cart" onClick={() => setCartOpen(true)}>♧<b>{cart}</b></button></div>
+        <div className="actions"><button className="icon-button" aria-label="Search" onClick={() => setSearch(!search)}>⌕</button><button className="bag" aria-label="Cart" onClick={() => setCartOpen(true)}><span className="modern-bag"><i/></span><b>{cart}</b></button></div>
       </header>
       {search && <div className="searchbar"><input autoFocus placeholder="Search your next favourite..." /><span>Press enter to search</span></div>}
 
@@ -42,7 +40,7 @@ export default function Home() {
 
       <section className="category-strip"><div className="section-heading"><span>✦</span><h2>Shop by Category</h2><span>✦</span></div><div className="category-nav">{["All","Everyday","Bottom Wear","Dresses","Co-ords","Party Wear"].map((c) => <button className={activeCategory === c ? "active" : ""} key={c} onClick={() => setActiveCategory(c)}>{c}</button>)}</div><a className="category-all" href="/shop">Explore all categories&nbsp; →</a></section>
 
-      <section className="shop" id="shop"><div className="shop-heading"><div><span className="eyebrow">THE CARNIVAL EDIT</span><h2>Pieces to <i>fall for</i></h2></div><a className="text-link" href="/shop">Shop all&nbsp; →</a></div><div className="product-grid">{shownProducts.map((p) => <article className="product-card" key={p.name}><a href="/product/rose-noor-anarkali-set"><div className="product-image">{p.badge && <em>{p.badge}</em>}<img src={p.img} alt={p.name} style={{objectPosition: `${p.position || "50%"} center`}}/><button aria-label="Add to wishlist" onClick={(e) => e.preventDefault()}>♡</button></div><div className="product-info"><div><h3>{p.name}</h3><p>{p.type}</p></div><strong>{p.price} {p.old && <del>{p.old}</del>}</strong></div></a><button className="add-button" onClick={() => addToBag(p.name)}>Add to bag <span>+</span></button></article>)}</div></section>
+      <section className="shop" id="shop"><div className="shop-heading"><div><span className="eyebrow">THE CARNIVAL EDIT</span><h2>Pieces to <i>fall for</i></h2></div><a className="text-link" href="/shop">Shop all&nbsp; →</a></div><div className="product-grid">{shownProducts.map((p) => <article className="product-card" key={p.name}><a href={p.href}><div className="product-image">{p.badge && <em>{p.badge}</em>}<img src={p.img} alt={p.name} style={{objectPosition: `${p.position || "50%"} center`}}/><button aria-label="Add to wishlist" onClick={(e) => e.preventDefault()}>♡</button></div><div className="product-info"><div><h3>{p.name}</h3><p>{p.type}</p></div><strong>{p.price}</strong></div></a><button className="add-button" onClick={() => addToBag(p.name)}>Add to bag <span>+</span></button></article>)}</div></section>
 
       <section className="story" id="story"><img src="/collection.jpg" alt="Our welcoming store"/><div><span className="eyebrow">OUR STORY</span><h2>Where Tradition <i>Meets Trend</i></h2><p>At Carnival of Clothes by Nandini, we blend timeless tradition with modern elegance. Each piece is handpicked to bring you quality, grace, and unmatched style.</p><a className="text-link" href="#contact">Learn more about us&nbsp; →</a></div><div className="section-index">02</div></section>
 
