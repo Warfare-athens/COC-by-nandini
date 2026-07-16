@@ -17,6 +17,7 @@ const products = [
   ["Rose Pink Blazer Co-ord", "Co-ord Sets", "₹4,999", "New"],
   ["Ivory Power Suit Co-ord", "Co-ord Sets", "₹5,499", "New"],
   ["Midnight One-Shoulder Maxi", "Dresses", "₹4,499", "New"],
+  ["Sandstone Vest Co-ord", "Co-ord Sets", "₹4,799", "New"],
 ];
 
 export default function ShopPage() {

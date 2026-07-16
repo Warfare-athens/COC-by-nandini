@@ -10,6 +10,7 @@ const products = [
   { name: "Rose Pink Blazer Co-ord", type: "Blush tailored · New arrival", price: "₹4,999", img: "/coord-set.jpg", badge: "New", href: "/product/rose-pink-co-ord-set", position: "50%" },
   { name: "Ivory Power Suit Co-ord", type: "Double-breasted · New arrival", price: "₹5,499", img: "/coord-ivory.jpg", badge: "New", href: "/product/ivory-double-breasted-co-ord-set", position: "50%" },
   { name: "Midnight One-Shoulder Maxi", type: "Black drape · New arrival", price: "₹4,499", img: "/black-maxi-dress.jpg", badge: "New", href: "/product/black-one-shoulder-maxi-dress", position: "50%" },
+  { name: "Sandstone Vest Co-ord", type: "Tailored beige · New arrival", price: "₹4,799", img: "/beige-vest-coord.jpg", badge: "New", href: "/product/beige-vest-trouser-coord", position: "50%" },
 ];
 
 export default function Home() {
