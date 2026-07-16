@@ -35,7 +35,7 @@ export default function Home() {
 
       <section className="hero" id="top">
         <div className="hero-copy"><span className="eyebrow">THE NEW SEASON EDIT</span><h1>Timeless <i>Elegance,</i><br/>Crafted<br/>for You.</h1><p>Discover curated collections that celebrate your style and every special moment.</p><a href="#shop" className="primary">Explore Collection <span>→</span></a><div className="dots"><b/>○ ○</div></div>
-        <div className="hero-image"><img src="/store.jpg" alt="Carnival of Clothes boutique interior"/><div className="hero-stamp">CARNIVAL<br/>OF CLOTHES</div></div>
+        <div className="hero-image"><img src="/hero.jpg" alt="Rose pink tailored co-ord in the Carnival of Clothes boutique"/><div className="hero-stamp">CARNIVAL<br/>OF CLOTHES</div></div>
       </section>
 
       <section className="collections" id="collections"><div className="section-index">01</div><div><span className="eyebrow">OUR COLLECTION</span><h2>Curated Styles <i>For Every You</i></h2><div className="collection-grid">{["Festive Wear","Ethnic Wear","Contemporary"].map((x, i) => <a className="collection-card" href="#shop" key={x}><img src="/product.jpg" alt={x} style={{objectPosition: `${20 + i * 30}% center`}}/><strong>{x}</strong><span>Explore&nbsp; →</span></a>)}</div><a className="text-link" href="#shop">View all collections&nbsp; →</a></div></section>
