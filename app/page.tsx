@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import CartSheet from "./components/CartSheet";
 
 const categories = [
 ];
@@ -13,7 +14,7 @@ const products = [
 ];
 
 export default function Home() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false); const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState(0);
   const [search, setSearch] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -28,7 +29,7 @@ export default function Home() {
         <button className="icon-button menu-trigger" aria-label="Open menu" onClick={() => setMenuOpen(true)}><span>☰</span></button>
         <a className="logo" href="#top">Carnival of Clothes <small>by nandini ♡</small></a>
         <nav className="links"><a href="#collections">Collections</a><a href="#shop">Shop</a><a href="#story">Our Story</a><a href="#contact">Contact</a></nav>
-        <div className="actions"><button className="icon-button" aria-label="Search" onClick={() => setSearch(!search)}>⌕</button><button className="icon-button" aria-label="Wishlist">♡</button><button className="bag" aria-label="Cart">♧<b>{cart}</b></button></div>
+        <div className="actions"><button className="icon-button" aria-label="Search" onClick={() => setSearch(!search)}>⌕</button><button className="icon-button" aria-label="Wishlist">♡</button><button className="bag" aria-label="Cart" onClick={() => setCartOpen(true)}>♧<b>{cart}</b></button></div>
       </header>
       {search && <div className="searchbar"><input autoFocus placeholder="Search your next favourite..." /><span>Press enter to search</span></div>}
 
@@ -50,7 +51,7 @@ export default function Home() {
       <footer id="contact"><div><a className="logo">Carnival of Clothes <small>by nandini ♡</small></a><p>Curated collections that make every celebration unforgettable.</p></div><div><b>Quick links</b><a href="#shop">Collections</a><a href="#shop">New arrivals</a><a href="#story">About us</a></div><div><b>Customer care</b><a>Shipping & Delivery</a><a>Returns & Exchange</a><a>FAQs</a></div><div><b>Stay in the loop</b><p>Be the first to know about new arrivals & offers.</p><div className="email"><input placeholder="Enter your email"/><button>→</button></div></div><div className="copyright">© 2024 Carnival of Clothes by Nandini. All rights reserved.</div></footer>
 
       {menuOpen && <div className="drawer-backdrop" onClick={() => setMenuOpen(false)}><aside className="drawer" onClick={(e) => e.stopPropagation()}><button className="close" onClick={() => setMenuOpen(false)}>×</button><a className="logo">Carnival of Clothes <small>by nandini ♡</small></a><div className="drawer-links">{["Home","Collections","New Arrivals","Shop by Category","About Us","Our Story","Contact Us"].map((x) => <a href={x === "Home" ? "#top" : x === "Our Story" ? "#story" : "#shop"} onClick={() => setMenuOpen(false)} key={x}>{x}<span>›</span></a>)}</div><div className="drawer-note">Free shipping<br/><small>On orders above ₹2999</small></div><a className="primary" href="#shop" onClick={() => setMenuOpen(false)}>Continue shopping&nbsp; →</a></aside></div>}
-      {toast && <div className="toast">♡ {toast}</div>}
+      {toast && <div className="toast">♡ {toast}</div>}<CartSheet open={cartOpen} onClose={() => setCartOpen(false)} itemCount={cart} />
     </main>
   );
 }
