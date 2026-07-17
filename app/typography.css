@@ -1,0 +1,42 @@
+body {
+  font-family: 'Work Sans', sans-serif;
+  letter-spacing: 0.03em;
+}
+
+.logo,
+.logo-char-main,
+.logo-char-sub,
+h1,
+h2,
+h3,
+.catalog-card h3,
+.detail-copy h1,
+.shop-hero h1,
+.guide-title h2,
+.cart-header h2,
+.faq-item button {
+  font-family: 'Instrument Serif', serif;
+}
+
+.links,
+.links a,
+.drawer-links,
+.drawer-links a,
+.nav a,
+.eyebrow,
+.primary,
+.text-link,
+.category-nav,
+.add-button,
+.shipping,
+.catalog-card p,
+.product-info p,
+.product-info strong,
+.collection-card strong,
+.detail-copy,
+.faq-heading p,
+.tab-content,
+.cart-sheet,
+.cart-trust {
+  font-family: 'Work Sans', sans-serif !important;
+}

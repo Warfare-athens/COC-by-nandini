@@ -1,0 +1,57 @@
+.signature {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #b76f67;
+  height: 22px;
+  margin-top: 2px;
+}
+
+.text {
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0;
+  transform: translateY(4px);
+  animation: revealSignature 700ms ease forwards;
+  white-space: nowrap;
+}
+
+.flourish {
+  width: 42px;
+  height: auto;
+  margin-left: -2px;
+  overflow: visible;
+}
+
+.flourish path {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: drawFlourish 1.4s ease forwards 500ms;
+}
+
+@keyframes revealSignature {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drawFlourish {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text,
+  .flourish path {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+}
