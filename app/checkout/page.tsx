@@ -57,8 +57,9 @@ export default function CheckoutPage() {
           </div>
 
           <section className="rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:p-6">
-            <div className="mb-5 flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#f3dfd6] text-xs text-[#bb7068]">1</span><h2 className="text-sm font-semibold">Contact information</h2></div>
+            <div className="mb-5 flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#f3dfd6] text-xs text-[#bb7068]">1</span><h2 className="text-sm font-semibold">Personal details</h2></div>
             <div className="grid gap-4 sm:grid-cols-2">
+              <input className={`${inputClass} sm:col-span-2`} required autoComplete="name" placeholder="Full name" />
               <input className={inputClass} type="email" required placeholder="Email address" />
               <input className={inputClass} type="tel" required placeholder="Phone number" />
             </div>
@@ -67,8 +68,6 @@ export default function CheckoutPage() {
           <section className="rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:p-6">
             <div className="mb-5 flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#f3dfd6] text-xs text-[#bb7068]">2</span><h2 className="text-sm font-semibold">Delivery address</h2></div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <input className={inputClass} required placeholder="First name" />
-              <input className={inputClass} required placeholder="Last name" />
               <input className={`${inputClass} sm:col-span-2`} required placeholder="Address" />
               <input className={`${inputClass} sm:col-span-2`} placeholder="Apartment, suite, etc. (optional)" />
               <input className={inputClass} required placeholder="City" />
