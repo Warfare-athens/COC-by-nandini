@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "./components/Header";
 import { Signature } from "./components/Signature";
 import { addToCart } from "./cart-helper";
@@ -22,6 +22,7 @@ const products = [
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [toast, setToast] = useState("");
+  const pageRef = useRef<HTMLElement>(null);
   
   const shownProducts = useMemo(() => {
     if (activeCategory === "All") return products;
@@ -29,239 +30,130 @@ export default function Home() {
   }, [activeCategory]);
 
   useEffect(() => {
-    gsap.fromTo(".product-card",
-      { opacity: 0, y: 25 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        stagger: 0.06,
-        ease: "power2.out",
-        overwrite: "auto"
-      }
-    );
-  }, [shownProducts]);
+    gsap.registerPlugin(ScrollTrigger);
+    const media = gsap.matchMedia();
+    const cleanups: Array<() => void> = [];
 
-  useEffect(() => {
-    let handleMouseMove: (e: MouseEvent) => void;
-    let hero: Element | null = null;
-    let cardCleanups: (() => void)[] = [];
-
-    if (typeof window !== "undefined") {
-      gsap.registerPlugin(ScrollTrigger);
-
-      // Hero Section Animations
-      const tl = gsap.timeline();
-      tl.fromTo(".hero-copy .eyebrow", 
-        { opacity: 0, y: 30 },
-        { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
-      )
-      .fromTo(".hero-copy h1",
-        { opacity: 0, y: 40 },
-        { opacity: 1, y: 0, duration: 1, ease: "power3.out" },
-        "-=0.6"
-      )
-      .fromTo(".hero-copy p",
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" },
-        "-=0.6"
-      )
-      .fromTo(".hero-copy .primary",
-        { opacity: 0, scale: 0.9 },
-        { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.7)" },
-        "-=0.4"
-      )
-      .fromTo(".hero-copy .dots",
-        { opacity: 0 },
-        { opacity: 1, duration: 0.6 },
-        "-=0.4"
-      )
-      .fromTo(".hero-image img",
-        { scale: 1.15, filter: "brightness(0.7) saturate(0.5)" },
-        { scale: 1, filter: "brightness(1) saturate(0.9)", duration: 1.8, ease: "power2.out" },
-        "0"
-      )
-      .fromTo(".hero-stamp",
-        { opacity: 0, x: 20 },
-        { opacity: 1, x: 0, duration: 1, ease: "power2.out" },
-        "-=1"
-      );
-
-      // Collections Cards 3D Deal Entrance Animation
-      gsap.fromTo(".collection-card", 
-        { opacity: 0, y: 120, rotationY: 15, rotationX: -10, scale: 0.95 },
+    const context = gsap.context(() => {
+      media.add(
         {
-          opacity: 1,
-          y: 0,
-          rotationY: 0,
-          rotationX: 0,
-          scale: 1,
-          duration: 1.4,
-          stagger: 0.18,
-          ease: "power4.out",
-          scrollTrigger: {
-            trigger: ".collections",
-            start: "top 80%",
-            toggleActions: "play none none none"
-          }
-        }
-      );
+          motion: "(prefers-reduced-motion: no-preference)",
+          desktop: "(min-width: 801px)",
+        },
+        (mediaContext) => {
+          const { motion, desktop } = mediaContext.conditions as { motion: boolean; desktop: boolean };
+          if (!motion) return;
 
-      // Scroll Parallax inside card images
-      gsap.utils.toArray(".collection-card img").forEach((img: any) => {
-        gsap.fromTo(img,
-          { yPercent: -15 },
-          {
-            yPercent: 15,
-            ease: "none",
+          gsap.timeline({
+            defaults: { ease: "power3.out" },
             scrollTrigger: {
-              trigger: img,
-              start: "top bottom",
-              end: "bottom top",
-              scrub: true
-            }
-          }
-        );
-      });
+              trigger: ".hero",
+              start: "top 70%",
+              end: "bottom 20%",
+              toggleActions: "restart none restart reverse",
+            },
+          })
+            .fromTo(".hero-copy .eyebrow", { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.55 })
+            .fromTo(".hero-copy h1", { autoAlpha: 0, y: 55, skewY: 2 }, { autoAlpha: 1, y: 0, skewY: 0, duration: 1.05 }, "-=0.25")
+            .fromTo(".hero-copy p", { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.65 }, "-=0.55")
+            .fromTo(".hero-copy .primary", { autoAlpha: 0, y: 18, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, ease: "back.out(1.5)" }, "-=0.35")
+            .fromTo(".hero-copy .dots", { autoAlpha: 0, x: -15 }, { autoAlpha: 1, x: 0, duration: 0.45 }, "-=0.25")
+            .fromTo(".hero-image", { autoAlpha: 0, clipPath: "inset(0 0 100% 0 round 999px 999px 0 0)" }, { autoAlpha: 1, clipPath: "inset(0 0 0% 0 round 999px 999px 0 0)", duration: 1.25, ease: "power4.inOut" }, 0.08)
+            .fromTo(".hero-image img", { scale: 1.16 }, { scale: 1, duration: 1.55, ease: "power3.out" }, 0.08)
+            .fromTo(".hero-stamp", { autoAlpha: 0, x: 16 }, { autoAlpha: 1, x: 0, duration: 0.65 }, "-=0.6");
 
-      // Scroll Parallax on the story image
-      gsap.fromTo(".story img",
-        { yPercent: -20 },
-        {
-          yPercent: 20,
-          ease: "none",
-          scrollTrigger: {
-            trigger: ".story",
-            start: "top bottom",
-            end: "bottom top",
-            scrub: true
-          }
-        }
-      );
-
-      // Story Section entrance
-      const storyTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: ".story",
-          start: "top 75%",
-          toggleActions: "play none none none"
-        }
-      });
-      storyTl.fromTo(".story div",
-        { opacity: 0, x: 30 },
-        { opacity: 1, x: 0, duration: 0.8, ease: "power2.out" }
-      );
-
-      // Perks Section reveal
-      gsap.fromTo(".perks div",
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          stagger: 0.12,
-          ease: "power1.out",
-          scrollTrigger: {
-            trigger: ".perks",
-            start: "top 85%",
-            toggleActions: "play none none none"
-          }
-        }
-      );
-
-      // Subtle mouse-move parallax on hero image
-      hero = document.querySelector(".hero");
-      const img = document.querySelector(".hero-image img");
-      if (hero && img) {
-        handleMouseMove = (e: MouseEvent) => {
-          const { clientX, clientY } = e;
-          const { innerWidth, innerHeight } = window;
-          const xPercent = (clientX / innerWidth - 0.5) * 15;
-          const yPercent = (clientY / innerHeight - 0.5) * 15;
-
-          gsap.to(img, {
-            x: xPercent,
-            y: yPercent,
-            duration: 0.8,
-            ease: "power2.out"
-          });
-        };
-
-        hero.addEventListener("mousemove", handleMouseMove as any);
-      }
-
-      // Interactive 3D tilt hover on collection cards
-      const cards = gsap.utils.toArray(".collection-card");
-      cardCleanups = cards.map((card: any) => {
-        const cardImg = card.querySelector("img");
-        const handleCardMove = (e: MouseEvent) => {
-          const { clientX, clientY } = e;
-          const rect = card.getBoundingClientRect();
-          const x = (clientX - rect.left) / rect.width - 0.5;
-          const y = (clientY - rect.top) / rect.height - 0.5;
-
-          gsap.to(card, {
-            rotationY: x * 20,
-            rotationX: -y * 20,
-            scale: 1.04,
-            transformPerspective: 1000,
-            duration: 0.4,
-            ease: "power2.out"
-          });
-
-          if (cardImg) {
-            gsap.to(cardImg, {
-              x: x * 12,
-              y: y * 12,
-              duration: 0.4,
-              ease: "power2.out"
-            });
-          }
-        };
-
-        const handleCardLeave = () => {
-          gsap.to(card, {
-            rotationY: 0,
-            rotationX: 0,
-            scale: 1,
-            duration: 0.7,
-            ease: "power3.out"
-          });
-
-          if (cardImg) {
-            gsap.to(cardImg, {
+          const reveal = (trigger: string, targets: string, from: gsap.TweenVars, stagger = 0.1) => {
+            gsap.fromTo(targets, from, {
+              autoAlpha: 1,
               x: 0,
               y: 0,
-              duration: 0.7,
-              ease: "power3.out"
+              scale: 1,
+              rotation: 0,
+              duration: 0.72,
+              stagger,
+              ease: "back.out(1.18)",
+              scrollTrigger: {
+                trigger,
+                start: "top 66%",
+                end: "bottom 24%",
+                toggleActions: "restart none restart reverse",
+                fastScrollEnd: true,
+              },
+            });
+          };
+
+          reveal(".collections", ".collections .section-index, .collections .eyebrow, .collections h2", { autoAlpha: 0, y: 24 }, 0.08);
+          reveal(".collection-grid", ".collection-card", { autoAlpha: 0, y: 38, scale: 0.95, rotation: 1.2 }, 0.09);
+          reveal(".promo-grid", ".promo-card", { autoAlpha: 0, y: 34, scale: 0.96 }, 0.11);
+          reveal(".category-strip", ".section-heading, .category-nav button, .category-all", { autoAlpha: 0, y: 18 }, 0.055);
+          reveal(".shop", ".shop-heading > *, .product-card", { autoAlpha: 0, y: 32, scale: 0.975 }, 0.065);
+          reveal(".perks", ".perks > div", { autoAlpha: 0, y: 26, scale: 0.96 }, 0.085);
+          reveal("footer", "footer > div", { autoAlpha: 0, y: 20 }, 0.07);
+
+          gsap.timeline({
+            scrollTrigger: {
+              trigger: ".story",
+              start: "top 66%",
+              end: "bottom 24%",
+              toggleActions: "restart none restart reverse",
+            },
+          })
+            .fromTo(".story > img", { autoAlpha: 0, clipPath: "inset(100% 0 0 0 round 50% 50% 0 0)", scale: 1.08 }, { autoAlpha: 1, clipPath: "inset(0% 0 0 0 round 50% 50% 0 0)", scale: 1, duration: 1.1, ease: "power4.inOut" })
+            .fromTo(".story > div:not(.section-index) > *", { autoAlpha: 0, x: 36 }, { autoAlpha: 1, x: 0, duration: 0.7, stagger: 0.1, ease: "power3.out" }, "-=0.65")
+            .fromTo(".story .section-index", { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: 0.65 }, "-=0.45");
+
+          if (desktop) {
+            gsap.to(".hero-image img", { yPercent: 8, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 0.8 } });
+            gsap.to(".story > img", { yPercent: 9, ease: "none", scrollTrigger: { trigger: ".story", start: "top bottom", end: "bottom top", scrub: 0.8 } });
+
+            const hero = pageRef.current?.querySelector<HTMLElement>(".hero");
+            const heroImage = pageRef.current?.querySelector<HTMLElement>(".hero-image");
+            if (hero && heroImage) {
+              const moveX = gsap.quickTo(heroImage, "x", { duration: 0.7, ease: "power3.out" });
+              const moveY = gsap.quickTo(heroImage, "y", { duration: 0.7, ease: "power3.out" });
+              const onMove = (event: MouseEvent) => {
+                const bounds = hero.getBoundingClientRect();
+                moveX(((event.clientX - bounds.left) / bounds.width - 0.5) * 12);
+                moveY(((event.clientY - bounds.top) / bounds.height - 0.5) * 12);
+              };
+              const onLeave = () => { moveX(0); moveY(0); };
+              hero.addEventListener("mousemove", onMove);
+              hero.addEventListener("mouseleave", onLeave);
+              cleanups.push(() => {
+                hero.removeEventListener("mousemove", onMove);
+                hero.removeEventListener("mouseleave", onLeave);
+              });
+            }
+
+            pageRef.current?.querySelectorAll<HTMLElement>(".collection-card, .promo-card, .product-card").forEach((card) => {
+              const onEnter = () => gsap.to(card, { y: -8, scale: 1.025, duration: 0.35, ease: "power2.out", overwrite: "auto" });
+              const onLeave = () => gsap.to(card, { y: 0, scale: 1, duration: 0.55, ease: "power3.out", overwrite: "auto" });
+              card.addEventListener("mouseenter", onEnter);
+              card.addEventListener("mouseleave", onLeave);
+              cleanups.push(() => {
+                card.removeEventListener("mouseenter", onEnter);
+                card.removeEventListener("mouseleave", onLeave);
+              });
             });
           }
-        };
-
-        card.addEventListener("mousemove", handleCardMove as any);
-        card.addEventListener("mouseleave", handleCardLeave as any);
-
-        return () => {
-          card.removeEventListener("mousemove", handleCardMove as any);
-          card.removeEventListener("mouseleave", handleCardLeave as any);
-        };
-      });
-    }
+        }
+      );
+    }, pageRef);
 
     return () => {
-      if (hero && handleMouseMove) {
-        hero.removeEventListener("mousemove", handleMouseMove as any);
-      }
-      cardCleanups.forEach((cleanup) => cleanup());
+      cleanups.forEach((cleanup) => cleanup());
+      media.revert();
+      context.revert();
     };
   }, []);
 
   useEffect(() => {
-    // Quick stagger fade-in of product cards when category filter changes or grid mounts
-    gsap.fromTo(".product-card",
-      { opacity: 0, y: 25 },
-      { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: "power2.out" }
-    );
+    const cards = pageRef.current?.querySelectorAll<HTMLElement>(".product-card");
+    if (!cards?.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tween = gsap.fromTo(cards, { autoAlpha: 0, y: 28, scale: 0.97 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.065, ease: "power3.out", overwrite: "auto" });
+    return () => {
+      tween.kill();
+    };
   }, [shownProducts]);
 
   const addToBag = (product: typeof products[0]) => {
@@ -276,7 +168,7 @@ export default function Home() {
   };
 
   return (
-    <main>
+    <main ref={pageRef}>
       <Header activeTab="home" />
 
       <section className="hero" id="top">
@@ -319,13 +211,13 @@ export default function Home() {
               <div className="promo-image-wrapper">
                 <img src="/combos-co-ords.png" alt="Combos & Co-ords" />
               </div>
-              <strong>Combos & Co-ords</strong>
+              <strong className="uppercase">Combo</strong>
             </a>
             <a className="promo-card" href="/shop?category=Trending">
               <div className="promo-image-wrapper">
                 <img src="/special-offers-deals.jpg" alt="Special Offers & Deals" />
               </div>
-              <strong>Special Offers & Deals</strong>
+              <strong className="uppercase">Offers</strong>
             </a>
           </div>
         </div>

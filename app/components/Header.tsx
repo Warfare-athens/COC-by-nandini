@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getCartCount } from "../cart-helper";
 import CartSheet from "./CartSheet";
 import { Signature } from "./Signature";
@@ -9,11 +9,47 @@ interface HeaderProps {
   activeTab?: string;
 }
 
+const drawerCategories = [
+  { name: "Top Wear", img: "/top-wear-pink-floral.png", href: "/shop?category=Everyday%20Essentials", subcategories: ["Shirts", "Kurtis", "T-shirts", "Crop Tops", "Tank Tops", "Bodysuits"] },
+  { name: "Bottom Wear", img: "/bottom-wear-category.png", href: "/shop?category=Bottom%20Wear", subcategories: ["Jeans", "Trousers", "Cargo Pants", "Palazzo Pants", "Skirts", "Shorts"] },
+  { name: "Indian", img: "/indian-suits.png", href: "/shop?category=Indian", subcategories: ["Kurtis", "Kurta Sets", "Sarees", "Lehenga Sets", "Anarkali Suits", "Dupattas"] },
+  { name: "Korean", img: "/korean-suit-style.png", href: "/shop?category=Korean", subcategories: ["Korean Tops", "Korean Dresses", "Korean Co-ords", "Oversized Shirts", "Pleated Skirts"] },
+  { name: "Party Wear", img: "/party-wear-red-dress.png", href: "/shop?category=Party%20Wear", subcategories: ["Party Dresses", "Cocktail Dresses", "Sequin Tops", "Satin Tops", "Corset Tops", "Jumpsuits", "Playsuits"] },
+  { name: "Accessories", img: "/accessories-gold-jewelry.jpg", href: "/shop?category=Accessories", subcategories: ["Handbags", "Jewellery", "Sunglasses", "Belts", "Hair Accessories", "Scarves"] },
+  { name: "COMBO", img: "/combos-co-ords.png", href: "/shop?category=Co-ord%20Sets", uppercase: true },
+  { name: "OFFERS", img: "/special-offers-deals.jpg", href: "/shop?category=Trending", featured: true, uppercase: true },
+];
+
 export default function Header({ activeTab }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [search, setSearch] = useState(false);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const drawerBackdropRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const drawerClosingRef = useRef(false);
+
+  const closeMenu = useCallback(() => {
+    if (drawerClosingRef.current) return;
+
+    const backdrop = drawerBackdropRef.current;
+    const drawer = drawerRef.current;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!backdrop || !drawer || reduceMotion) {
+      setMenuOpen(false);
+      return;
+    }
+
+    drawerClosingRef.current = true;
+    import("gsap").then(({ gsap }) => {
+      gsap.timeline({ onComplete: () => setMenuOpen(false) })
+        .to(drawer, { x: "-100%", opacity: 0.75, duration: 0.34, ease: "power2.in" })
+        .to(backdrop, { opacity: 0, duration: 0.2, ease: "power1.in" }, "-=0.16");
+    });
+  }, []);
 
   const splitText = (text: string, className: string) => {
     return text.split("").map((char, index) => (
@@ -24,10 +60,10 @@ export default function Header({ activeTab }: HeaderProps) {
   };
 
   useEffect(() => {
-    setCartCount(getCartCount());
     const handleUpdate = () => {
       setCartCount(getCartCount());
     };
+    const initialLoad = window.setTimeout(handleUpdate, 0);
     window.addEventListener("coc-cart-updated", handleUpdate);
 
     // GSAP writing animation
@@ -47,7 +83,10 @@ export default function Header({ activeTab }: HeaderProps) {
         }, "-=0.1");
     });
 
-    return () => window.removeEventListener("coc-cart-updated", handleUpdate);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.removeEventListener("coc-cart-updated", handleUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -64,6 +103,97 @@ export default function Header({ activeTab }: HeaderProps) {
       });
     }
   }, [cartCount]);
+
+  useEffect(() => {
+    if (!menuOpen || !drawerBackdropRef.current || !drawerRef.current) return;
+
+    drawerClosingRef.current = false;
+
+    let cleanup = () => {};
+    let cancelled = false;
+
+    import("gsap").then(({ gsap }) => {
+      if (cancelled || !drawerBackdropRef.current || !drawerRef.current) return;
+
+      const backdrop = drawerBackdropRef.current;
+      const drawer = drawerRef.current;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (reduceMotion) {
+        gsap.set(backdrop, { opacity: 1 });
+        return;
+      }
+
+      const timeline = gsap.timeline();
+      timeline
+        .fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: "power1.out" })
+        .fromTo(drawer, { x: -45, opacity: 0 }, { x: 0, opacity: 1, duration: 0.42, ease: "power3.out" }, 0)
+        .fromTo(
+          drawer.querySelectorAll(".drawer-top > *"),
+          { opacity: 0, y: -10 },
+          { opacity: 1, y: 0, duration: 0.28, stagger: 0.08, ease: "power2.out" },
+          0.12
+        )
+        .fromTo(
+          drawer.querySelectorAll(".drawer-category-item"),
+          { opacity: 0, x: -22 },
+          { opacity: 1, x: 0, duration: 0.34, stagger: 0.065, ease: "power2.out" },
+          0.2
+        )
+        .fromTo(
+          drawer.querySelectorAll(".drawer-footer-links > a"),
+          { opacity: 0, y: 14 },
+          { opacity: 1, y: 0, duration: 0.32, stagger: 0.09, ease: "power2.out" },
+          "-=0.12"
+        );
+
+      cleanup = () => timeline.kill();
+    });
+
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const scrollY = window.scrollY;
+    const previous = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    };
+
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+
+    return () => {
+      document.body.style.overflow = previous.overflow;
+      document.body.style.position = previous.position;
+      document.body.style.top = previous.top;
+      document.body.style.width = previous.width;
+      window.scrollTo(0, scrollY);
+    };
+  }, [menuOpen]);
+
+  const handleDrawerTouchStart = (event: React.TouchEvent) => {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const handleDrawerTouchEnd = (event: React.TouchEvent) => {
+    const startX = touchStartXRef.current;
+    const endX = event.changedTouches[0]?.clientX;
+    touchStartXRef.current = null;
+
+    if (startX !== null && endX !== undefined && startX - endX > 70) {
+      closeMenu();
+    }
+  };
 
   const catImgStyle = {
     width: "40px",
@@ -118,63 +248,81 @@ export default function Header({ activeTab }: HeaderProps) {
       
       {/* Mobile Drawer */}
       {menuOpen && (
-        <div className="drawer-backdrop" onClick={() => setMenuOpen(false)}>
-          <aside className="drawer" onClick={(e) => e.stopPropagation()}>
-            <button className="close" onClick={() => setMenuOpen(false)}>×</button>
-            <a className="logo" href="/" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>Carnival of Clothes <Signature /></a>
-            <div className="drawer-links drawer-categories">
-              <a href="/shop?category=Korean" onClick={() => setMenuOpen(false)}>
-                <div className="drawer-cat-info">
-                  <img src="/korean-suit-style.png" alt="Korean" className="drawer-cat-img" style={catImgStyle} />
-                  <span>Korean Style</span>
-                </div>
-                <b>›</b>
+        <div ref={drawerBackdropRef} className="drawer-backdrop overscroll-contain opacity-0" onClick={closeMenu}>
+          <aside
+            ref={drawerRef}
+            className="drawer !flex touch-pan-y !flex-col overscroll-contain"
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={handleDrawerTouchStart}
+            onTouchEnd={handleDrawerTouchEnd}
+          >
+            <div className="drawer-top flex !h-[70px] !min-h-[70px] shrink-0 items-center justify-between border-b border-[#e8cdbc] py-0">
+              <a className="logo drawer-logo !m-0 !flex !min-h-0 !w-auto !clear-none flex-col !items-start !p-0" href="/">
+                <span className="block whitespace-nowrap text-[19px] leading-none opacity-100">
+                  Carnival of Clothes
+                </span>
+                <Signature />
               </a>
-              <a href="/shop?category=Party%20Wear" onClick={() => setMenuOpen(false)}>
-                <div className="drawer-cat-info">
-                  <img src="/party-wear-red-dress.png" alt="Party Wear" className="drawer-cat-img" style={catImgStyle} />
-                  <span>Party Wear</span>
-                </div>
-                <b>›</b>
-              </a>
-              <a href="/shop?category=Accessories" onClick={() => setMenuOpen(false)}>
-                <div className="drawer-cat-info">
-                  <img src="/accessories-gold-jewelry.jpg" alt="Accessories" className="drawer-cat-img" style={catImgStyle} />
-                  <span>Accessories</span>
-                </div>
-                <b>›</b>
-              </a>
-              <a href="/shop?category=Everyday%20Essentials" onClick={() => setMenuOpen(false)}>
-                <div className="drawer-cat-info">
-                  <img src="/top-wear-pink-floral.png" alt="Everyday Essentials" className="drawer-cat-img" style={catImgStyle} />
-                  <span>Everyday Essentials</span>
-                </div>
-                <b>›</b>
-              </a>
-              <a href="/shop?category=Bottom%20Wear" onClick={() => setMenuOpen(false)}>
-                <div className="drawer-cat-info">
-                  <img src="/bottom-wear-category.png" alt="Bottom Wear" className="drawer-cat-img" style={catImgStyle} />
-                  <span>Bottom Wear</span>
-                </div>
-                <b>›</b>
-              </a>
-              <a href="/shop?category=Co-ord%20Sets" onClick={() => setMenuOpen(false)}>
-                <div className="drawer-cat-info">
-                  <img src="/combos-co-ords.png" alt="Combos & Co-ords" className="drawer-cat-img" style={catImgStyle} />
-                  <span>Combos & Co-ords</span>
-                </div>
-                <b>›</b>
-              </a>
-              <a href="/shop?category=Trending" onClick={() => setMenuOpen(false)}>
-                <div className="drawer-cat-info">
-                  <img src="/special-offers-deals.jpg" alt="Special Offers" className="drawer-cat-img" style={catImgStyle} />
-                  <span className="offer-highlight">Special Offers & Deals</span>
-                </div>
-                <b>›</b>
-              </a>
+              <button
+                className="close !static !float-none !m-0 !p-0 text-[34px] leading-none"
+                aria-label="Close menu"
+                onClick={closeMenu}
+              >
+                ×
+              </button>
             </div>
-            <div className="drawer-footer-links">
-              <a href="/shop?category=Track%20Order" onClick={() => setMenuOpen(false)}>
+            <div className="drawer-links drawer-categories !mt-0 !min-h-0 !flex-1 !overflow-x-hidden !border-t-0 !pt-2 [&_span]:!font-['Work_Sans'] [&_span]:!text-[12px] [&_span]:!font-normal [&_span]:!tracking-normal">
+              {drawerCategories.map((category) => {
+                const expanded = openCategory === category.name;
+
+                return (
+                  <div className="drawer-category-item border-b border-[#eeded5] last:!border-b-0" key={category.name}>
+                    {category.subcategories ? (
+                      <>
+                        <button
+                          className={`flex w-full items-center justify-between px-1 py-2 text-left transition-colors duration-300 ${expanded ? "bg-[#f8ebe5]" : ""}`}
+                          aria-expanded={expanded}
+                          onClick={() => setOpenCategory(expanded ? null : category.name)}
+                        >
+                          <span className="drawer-cat-info">
+                            <img src={category.img} alt="" className="drawer-cat-img" style={catImgStyle} />
+                            <span>{category.name}</span>
+                          </span>
+                          <b className={`text-base font-normal transition-transform duration-300 ${expanded ? "rotate-90" : ""}`}>›</b>
+                        </button>
+                        <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                          <div className="min-h-0 overflow-hidden">
+                            <div className="mb-3 ml-[55px] overflow-hidden rounded-md border border-[#ead8ce] bg-[#fffaf7]">
+                              {category.subcategories.map((subcategory) => (
+                                <a
+                                  className="!flex !w-full !items-center !justify-between !border-0 !border-b !border-[#ead8ce] !px-3 !py-2.5 !text-[11px] !normal-case !tracking-normal text-[#66534d] last:!border-b-0 hover:!bg-[#f8ebe5] hover:!text-[#bb7068]"
+                                  href={`${category.href}&subcategory=${encodeURIComponent(subcategory)}`}
+                                  onClick={() => setMenuOpen(false)}
+                                  key={subcategory}
+                                >
+                                  {subcategory}
+                                  <b className="text-sm font-normal text-[#bb7068]">›</b>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <a className="!border-0" href={category.href} onClick={() => setMenuOpen(false)}>
+                        <div className="drawer-cat-info">
+                          <img src={category.img} alt={category.name} className="drawer-cat-img" style={catImgStyle} />
+                          <span className={`${category.featured ? "offer-highlight" : ""} ${category.uppercase ? "!uppercase" : ""}`}>{category.name}</span>
+                        </div>
+                        <b>›</b>
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="drawer-footer-links !mt-auto !flex !flex-col !items-stretch !gap-2 !pb-0">
+              <a className="track-order-link !flex !w-full !justify-start !px-1 !py-3" href="/shop?category=Track%20Order" onClick={() => setMenuOpen(false)}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline-block' }}>
                   <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                   <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
@@ -182,7 +330,7 @@ export default function Header({ activeTab }: HeaderProps) {
                 </svg>
                 Track Order
               </a>
-              <a href="/shop?category=Account" onClick={() => setMenuOpen(false)}>
+              <a className="account-button !flex !w-full !justify-center !rounded-lg !bg-[#bb7068] !px-4 !py-3.5 !text-white shadow-[0_8px_20px_rgba(187,112,104,0.24)]" href="/shop?category=Account" onClick={() => setMenuOpen(false)}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline-block' }}>
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
@@ -190,7 +338,6 @@ export default function Header({ activeTab }: HeaderProps) {
                 My Account
               </a>
             </div>
-            <a className="primary" href="/shop" onClick={() => setMenuOpen(false)}>Continue shopping&nbsp; →</a>
           </aside>
         </div>
       )}

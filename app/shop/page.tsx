@@ -33,6 +33,7 @@ export default function ShopPage() {
     : products.filter((p) => p.categories.includes(active));
 
   useEffect(() => {
+    let initialCategory = "";
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const cat = params.get("category");
@@ -40,16 +41,19 @@ export default function ShopPage() {
         const decoded = decodeURIComponent(cat);
         const found = guide.find((g) => g[0].toLowerCase() === decoded.toLowerCase());
         if (found) {
-          setActive(found[0]);
+          initialCategory = found[0];
         } else if (decoded.toLowerCase() === "all") {
-          setActive("All collections");
+          initialCategory = "All collections";
         } else if (decoded.toLowerCase() === "korean") {
-          setActive("Trending");
+          initialCategory = "Trending";
         } else if (decoded.toLowerCase() === "indian") {
-          setActive("Party Wear");
+          initialCategory = "Party Wear";
         }
       }
     }
+    if (!initialCategory) return;
+    const initialLoad = window.setTimeout(() => setActive(initialCategory), 0);
+    return () => window.clearTimeout(initialLoad);
   }, []);
 
   useEffect(() => {

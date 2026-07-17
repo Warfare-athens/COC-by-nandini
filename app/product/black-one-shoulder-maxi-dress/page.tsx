@@ -73,7 +73,7 @@ export default function BlackMaxiDressPage() {
               <button className={size === s ? "chosen" : ""} onClick={() => setSize(s)} key={s}>{s}</button>
             ))}
           </div>
-          <p className="fit-note">ⓘ Model is 5'8” tall and is wearing size S</p>
+          <p className="fit-note">ⓘ Model is 5&apos;8” tall and is wearing size S</p>
           <button className="detail-add" onClick={handleAddToBag}>
             {added ? "Added to bag ✓" : "Add to bag"}
           </button>
