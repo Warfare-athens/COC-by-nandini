@@ -1,15 +1,18 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { CartItem, getCartItems } from "../cart-helper";
+import { CartItem, getCartItems, saveCartItems } from "../cart-helper";
 import { Signature } from "../components/Signature";
 
 const inputClass = "w-full rounded-lg border border-[#e8cdbc] bg-[#fffaf7] px-4 py-3 text-sm text-[#3a2926] outline-none transition placeholder:text-[#aa9188] focus:border-[#bb7068] focus:ring-2 focus:ring-[#bb7068]/15";
 
 export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [payment, setPayment] = useState("upi");
+  const [payment, setPayment] = useState("cod");
   const [placed, setPlaced] = useState(false);
+  const [placedOrderNumber, setPlacedOrderNumber] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => setItems(getCartItems()), 0);
@@ -21,9 +24,20 @@ export default function CheckoutPage() {
   const shipping = subtotal >= 2999 || subtotal === 0 ? 0 : 149;
   const total = subtotal + shipping;
 
-  const placeOrder = (event: FormEvent<HTMLFormElement>) => {
+  const placeOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (items.length) setPlaced(true);
+    if (!items.length) return;
+    setSubmitting(true); setCheckoutError("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      customer: { fullName: form.get("fullName"), email: form.get("email"), phone: form.get("phone") },
+      address: { line1: form.get("line1"), line2: form.get("line2"), city: form.get("city"), state: form.get("state"), postalCode: form.get("postalCode"), country: "India" },
+      items: items.map((item) => ({ name: item.name, size: item.size, quantity: item.quantity })), paymentMethod: payment,
+    }) });
+    const data = await response.json(); setSubmitting(false);
+    if (!response.ok) return setCheckoutError(data.error || "Unable to place your order.");
+    saveCartItems([]);
+    setPlacedOrderNumber(data.orderNumber); setPlaced(true);
   };
 
   if (placed) {
@@ -34,6 +48,8 @@ export default function CheckoutPage() {
           <span className="mt-6 block text-[10px] font-semibold uppercase tracking-[0.2em] text-[#bb7068]">Order received</span>
           <h1 className="mt-3 font-['Instrument_Serif'] text-4xl text-[#3a2926] sm:text-5xl">Thank you for your order</h1>
           <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-[#806f69]">Your Carnival edit is being prepared with care. A confirmation will be sent to your email.</p>
+          <strong className="mt-5 block text-sm tracking-[0.12em] text-[#7e3d38]">{placedOrderNumber}</strong>
+          <a href={`/track-order?order=${placedOrderNumber}`} className="mt-5 block text-xs font-semibold text-[#bb7068]">Track this order →</a>
           <a href="/" className="mt-8 inline-flex rounded-lg bg-[#bb7068] px-8 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-white">Continue shopping</a>
         </section>
       </main>
@@ -59,20 +75,20 @@ export default function CheckoutPage() {
           <section className="rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:p-6">
             <div className="mb-5 flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#f3dfd6] text-xs text-[#bb7068]">1</span><h2 className="text-sm font-semibold">Personal details</h2></div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <input className={`${inputClass} sm:col-span-2`} required autoComplete="name" placeholder="Full name" />
-              <input className={inputClass} type="email" required placeholder="Email address" />
-              <input className={inputClass} type="tel" required placeholder="Phone number" />
+              <input name="fullName" className={`${inputClass} sm:col-span-2`} required autoComplete="name" placeholder="Full name" />
+              <input name="email" className={inputClass} type="email" required placeholder="Email address" />
+              <input name="phone" className={inputClass} type="tel" required placeholder="Phone number" />
             </div>
           </section>
 
           <section className="rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:p-6">
             <div className="mb-5 flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#f3dfd6] text-xs text-[#bb7068]">2</span><h2 className="text-sm font-semibold">Delivery address</h2></div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <input className={`${inputClass} sm:col-span-2`} required placeholder="Address" />
-              <input className={`${inputClass} sm:col-span-2`} placeholder="Apartment, suite, etc. (optional)" />
-              <input className={inputClass} required placeholder="City" />
-              <input className={inputClass} required placeholder="State" />
-              <input className={inputClass} required inputMode="numeric" placeholder="PIN code" />
+              <input name="line1" className={`${inputClass} sm:col-span-2`} required placeholder="Address" />
+              <input name="line2" className={`${inputClass} sm:col-span-2`} placeholder="Apartment, suite, etc. (optional)" />
+              <input name="city" className={inputClass} required placeholder="City" />
+              <input name="state" className={inputClass} required placeholder="State" />
+              <input name="postalCode" className={inputClass} required inputMode="numeric" placeholder="PIN code" />
               <select className={inputClass} defaultValue="India"><option>India</option></select>
             </div>
           </section>
@@ -80,19 +96,18 @@ export default function CheckoutPage() {
           <section className="rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:p-6">
             <div className="mb-5 flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#f3dfd6] text-xs text-[#bb7068]">3</span><h2 className="text-sm font-semibold">Payment method</h2></div>
             <div className="grid gap-3 sm:grid-cols-3">
-              {[['upi', 'UPI'], ['card', 'Card'], ['cod', 'Cash on delivery']].map(([value, label]) => (
+              {[["cod", "Cash on delivery"]].map(([value, label]) => (
                 <label className={`cursor-pointer rounded-lg border px-4 py-3 text-center text-xs transition ${payment === value ? "border-[#bb7068] bg-[#f7e6df] text-[#a95f5a]" : "border-[#e8cdbc]"}`} key={value}>
                   <input className="sr-only" type="radio" name="payment" value={value} checked={payment === value} onChange={() => setPayment(value)} />{label}
                 </label>
               ))}
             </div>
-            {payment === "upi" && <input className={`${inputClass} mt-4`} required placeholder="UPI ID (name@bank)" />}
-            {payment === "card" && <div className="mt-4 grid gap-4 sm:grid-cols-2"><input className={`${inputClass} sm:col-span-2`} required placeholder="Card number" /><input className={inputClass} required placeholder="MM / YY" /><input className={inputClass} required placeholder="CVV" /></div>}
             {payment === "cod" && <p className="mt-4 rounded-lg bg-[#f7e6df] p-3 text-xs leading-5 text-[#806f69]">Pay in cash when your order arrives. Please keep the exact amount ready.</p>}
+            <p className="mt-3 text-[10px] text-[#8c746b]">Online payments will be enabled after Razorpay is connected.</p>
           </section>
         </div>
 
-        <aside className="h-max rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 lg:sticky lg:top-6 lg:p-6">
+        <aside aria-busy={submitting} className="h-max rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 lg:sticky lg:top-6 lg:p-6">
           <h2 className="font-['Instrument_Serif'] text-2xl">Order summary</h2>
           {items.length ? (
             <>
@@ -112,6 +127,7 @@ export default function CheckoutPage() {
               </div>
               <button type="submit" className="mt-6 w-full rounded-lg bg-[#bb7068] py-4 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(187,112,104,0.24)] transition hover:bg-[#a95f5a]">Place order · ₹{total.toLocaleString()}</button>
               <p className="mt-4 text-center text-[9px] leading-4 text-[#8c746b]">Secure checkout · Easy returns · Payment information is encrypted</p>
+              {checkoutError && <p className="mt-4 rounded-md border border-[#d99a8f] bg-[#fff0eb] px-3 py-2 text-xs text-[#a5534d]" role="alert">{checkoutError}</p>}
             </>
           ) : (
             <div className="py-10 text-center"><p className="text-sm text-[#806f69]">Your cart is empty.</p><a href="/shop" className="mt-5 inline-block text-xs font-semibold text-[#bb7068]">Explore the collection →</a></div>

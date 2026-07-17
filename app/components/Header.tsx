@@ -9,6 +9,23 @@ interface HeaderProps {
   activeTab?: string;
 }
 
+const MenuChevron = ({ className = "" }: { className?: string }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
+
 const drawerCategories = [
   { name: "Top Wear", img: "/top-wear-pink-floral.png", href: "/shop?category=Everyday%20Essentials", subcategories: ["Shirts", "Kurtis", "T-shirts", "Crop Tops", "Tank Tops", "Bodysuits"] },
   { name: "Bottom Wear", img: "/bottom-wear-category.png", href: "/shop?category=Bottom%20Wear", subcategories: ["Jeans", "Trousers", "Cargo Pants", "Palazzo Pants", "Skirts", "Shorts"] },
@@ -20,11 +37,28 @@ const drawerCategories = [
   { name: "OFFERS", img: "/special-offers-deals.jpg", href: "/shop?category=Trending", featured: true, uppercase: true },
 ];
 
+const subcategoryImages: Record<string, string> = {
+  Shirts: "/top-wear.jpg", Kurtis: "/indian-suits.png", "T-shirts": "/streetwear-denim-set.jpg",
+  "Crop Tops": "/rose-pink-coord.png", "Tank Tops": "/beige-vest-coord.jpg", Bodysuits: "/top-wear-pink-floral.png",
+  Jeans: "/streetwear-denim-set.jpg", Trousers: "/wide-leg-trousers.png", "Cargo Pants": "/korean-streetwear.jpg",
+  "Palazzo Pants": "/bottom-wear-category.png", Skirts: "/coord-set.jpg", Shorts: "/bottom-wear.jpg",
+  "Kurta Sets": "/indian-suits.png", Sarees: "/indian.jpg", "Lehenga Sets": "/party-wear.jpg",
+  "Anarkali Suits": "/indian-suits.png", Dupattas: "/indian.jpg", "Korean Tops": "/korean-streetwear.jpg",
+  "Korean Dresses": "/minimalist-cotton-dress.jpg", "Korean Co-ords": "/korean-suit-style.png",
+  "Oversized Shirts": "/korean-streetwear.jpg", "Pleated Skirts": "/coord-set.jpg",
+  "Party Dresses": "/party-wear-red-dress.png", "Cocktail Dresses": "/cocktail-dress.png",
+  "Sequin Tops": "/party-wear.jpg", "Satin Tops": "/black-maxi-dress.jpg", "Corset Tops": "/top-wear-pink-floral.png",
+  Jumpsuits: "/party-wear-red-dress.png", Playsuits: "/rose-pink-coord.png", Handbags: "/classic-leather-bag.png",
+  Jewellery: "/accessories-gold-jewelry.jpg", Sunglasses: "/black-oval-sunglasses.png", Belts: "/special-offers-deals.jpg",
+  "Hair Accessories": "/accessories.png", Scarves: "/accessories-gold-jewelry.jpg",
+};
+
 export default function Header({ activeTab }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [search, setSearch] = useState(false);
+  const [announcement, setAnnouncement] = useState<string | null>("FREE SHIPPING ON ORDERS ABOVE ₹2999");
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const drawerBackdropRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
@@ -103,6 +137,12 @@ export default function Header({ activeTab }: HeaderProps) {
       });
     }
   }, [cartCount]);
+
+  useEffect(() => {
+    fetch("/api/storefront/settings").then((response) => response.json()).then((data) => {
+      setAnnouncement(data.announcement?.message || null);
+    }).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!menuOpen || !drawerBackdropRef.current || !drawerRef.current) return;
@@ -207,7 +247,7 @@ export default function Header({ activeTab }: HeaderProps) {
 
   return (
     <>
-      <div className="shipping">✦ &nbsp; FREE SHIPPING ON ORDERS ABOVE ₹2999 &nbsp; ✦</div>
+      {announcement && <div className="shipping">✦ &nbsp; {announcement} &nbsp; ✦</div>}
       <header className="nav">
         <button className="icon-button menu-trigger" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
           <span className="modern-menu"><i/><i/><i/></span>
@@ -288,20 +328,35 @@ export default function Header({ activeTab }: HeaderProps) {
                             <img src={category.img} alt="" className="drawer-cat-img" style={catImgStyle} />
                             <span>{category.name}</span>
                           </span>
-                          <b className={`text-base font-normal transition-transform duration-300 ${expanded ? "rotate-90" : ""}`}>›</b>
+                          <MenuChevron className={`shrink-0 text-[#8b625a] transition-transform duration-300 ${expanded ? "rotate-90" : ""}`} />
                         </button>
                         <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                           <div className="min-h-0 overflow-hidden">
                             <div className="mb-3 ml-[55px] overflow-hidden rounded-md border border-[#ead8ce] bg-[#fffaf7]">
+                              <a
+                                className="!flex !w-full !items-center !justify-between !border-0 !px-3 !py-1.5 !text-[11px] !font-medium !normal-case !tracking-normal text-[#bb7068] hover:!bg-[#f8ebe5]"
+                                href={category.href}
+                                onClick={() => setMenuOpen(false)}
+                              >
+                                <span className="truncate py-2">See all {category.name}</span>
+                                <MenuChevron className="ml-2 shrink-0 text-[#bb7068]" />
+                              </a>
                               {category.subcategories.map((subcategory) => (
                                 <a
-                                  className="!flex !w-full !items-center !justify-between !border-0 !border-b !border-[#ead8ce] !px-3 !py-2.5 !text-[11px] !normal-case !tracking-normal text-[#66534d] last:!border-b-0 hover:!bg-[#f8ebe5] hover:!text-[#bb7068]"
+                                  className="!flex !w-full !items-center !justify-between !border-0 !px-3 !py-1.5 !text-[11px] !normal-case !tracking-normal text-[#66534d] hover:!bg-[#f8ebe5] hover:!text-[#bb7068]"
                                   href={`${category.href}&subcategory=${encodeURIComponent(subcategory)}`}
                                   onClick={() => setMenuOpen(false)}
                                   key={subcategory}
                                 >
-                                  {subcategory}
-                                  <b className="text-sm font-normal text-[#bb7068]">›</b>
+                                  <span className="flex min-w-0 items-center gap-3">
+                                    <img
+                                      src={subcategoryImages[subcategory] ?? category.img}
+                                      alt=""
+                                      className="drawer-subcategory-img h-10 w-8 shrink-0 rounded-md border border-[#e3b99f] object-cover"
+                                    />
+                                    <span className="truncate">{subcategory}</span>
+                                  </span>
+                                  <MenuChevron className="ml-2 shrink-0 text-[#bb7068]" />
                                 </a>
                               ))}
                             </div>
@@ -314,7 +369,7 @@ export default function Header({ activeTab }: HeaderProps) {
                           <img src={category.img} alt={category.name} className="drawer-cat-img" style={catImgStyle} />
                           <span className={`${category.featured ? "offer-highlight" : ""} ${category.uppercase ? "!uppercase" : ""}`}>{category.name}</span>
                         </div>
-                        <b>›</b>
+                        <MenuChevron className="shrink-0 text-[#8b625a]" />
                       </a>
                     )}
                   </div>
@@ -322,20 +377,28 @@ export default function Header({ activeTab }: HeaderProps) {
               })}
             </div>
             <div className="drawer-footer-links !mt-auto !flex !flex-col !items-stretch !gap-2 !pb-0">
-              <a className="track-order-link !flex !w-full !justify-start !px-1 !py-3" href="/shop?category=Track%20Order" onClick={() => setMenuOpen(false)}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline-block' }}>
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-                Track Order
-              </a>
-              <a className="account-button !flex !w-full !justify-center !rounded-lg !bg-[#bb7068] !px-4 !py-3.5 !text-white shadow-[0_8px_20px_rgba(187,112,104,0.24)]" href="/shop?category=Account" onClick={() => setMenuOpen(false)}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline-block' }}>
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                My Account
+              <div className="drawer-order-links">
+                <a className="track-order-link" href="/track-order" onClick={() => setMenuOpen(false)}>
+                  <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                    <path d="m3.3 7 8.7 5 8.7-5M12 22V12" />
+                  </svg>
+                  <span>Track Order</span>
+                </a>
+                <a className="my-orders-link" href="/track-order" onClick={() => setMenuOpen(false)}>
+                  <span>My Orders</span>
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 2h9l3 3v17H6z" /><path d="M14 2v4h4M9 11h6M9 15h6" />
+                  </svg>
+                </a>
+              </div>
+              <a className="account-button" href="/track-order" onClick={() => setMenuOpen(false)}>
+                <span>My Account</span>
+                <span className="account-icon">
+                  <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
               </a>
             </div>
           </aside>

@@ -310,36 +310,26 @@ export default function Home() {
     const rails = curvedRailRefs.current
       .map((section, railIndex) => ({
         section,
+        scroller: section?.querySelector<HTMLElement>(".curved-rail-cards") ?? null,
         cards: curvedCardsRefs.current[railIndex]?.filter((card): card is HTMLAnchorElement => Boolean(card)) ?? [],
       }))
-      .filter((rail): rail is { section: HTMLElement; cards: HTMLAnchorElement[] } => Boolean(rail.section && rail.cards.length));
+      .filter((rail): rail is { section: HTMLElement; scroller: HTMLElement; cards: HTMLAnchorElement[] } => Boolean(rail.section && rail.scroller && rail.cards.length));
     if (!rails.length) return;
 
     let frame = 0;
     const render = () => {
       frame = 0;
-      rails.forEach(({ section, cards }) => {
-        const rect = section.getBoundingClientRect();
-        const travel = Math.max(section.offsetHeight - window.innerHeight, 1);
-        const progress = Math.min(1, Math.max(0, -rect.top / travel));
+      rails.forEach(({ scroller, cards }) => {
         const mobile = window.innerWidth <= 800;
-        const gap = mobile ? 285 : 360;
-        const cardWidth = mobile ? 250 : Math.min(330, Math.max(270, window.innerWidth * 0.2));
-        const edgeInset = mobile ? 18 : 40;
-        const totalTravel = (cards.length - 1) * gap;
-        const exitProgress = Math.min(1, Math.max(0, (progress - 0.8) / 0.2));
-        const easedExit = exitProgress * exitProgress * (3 - 2 * exitProgress);
+        const scrollerWidth = scroller.clientWidth;
 
-        cards.forEach((card, index) => {
-          const x = edgeInset + index * gap - progress * totalTravel;
-          const cardCenter = x + cardWidth / 2;
-          const normalizedX = Math.min(1, Math.max(-1, (cardCenter - window.innerWidth / 2) / (window.innerWidth * 0.55)));
+        cards.forEach((card) => {
+          const cardCenter = card.offsetLeft - scroller.scrollLeft + card.offsetWidth / 2;
+          const normalizedX = Math.min(1, Math.max(-1, (cardCenter - scrollerWidth / 2) / (scrollerWidth * 0.55)));
           const curveDepth = mobile ? 52 : 92;
-          const y = (mobile ? 4 : 0)
-            + (1 - normalizedX * normalizedX) * curveDepth
-            + easedExit * (mobile ? 120 : 180);
+          const y = (1 - normalizedX * normalizedX) * curveDepth;
           const rotation = normalizedX * 13;
-          card.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
+          card.style.transform = `translate3d(0, ${y}px, 0) rotate(${rotation}deg)`;
         });
       });
     };
@@ -348,11 +338,11 @@ export default function Home() {
     };
 
     render();
-    window.addEventListener("scroll", queueRender, { passive: true });
+    rails.forEach(({ scroller }) => scroller.addEventListener("scroll", queueRender, { passive: true }));
     window.addEventListener("resize", queueRender);
     return () => {
       if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", queueRender);
+      rails.forEach(({ scroller }) => scroller.removeEventListener("scroll", queueRender));
       window.removeEventListener("resize", queueRender);
     };
   }, [curvedProductSlides]);
@@ -360,9 +350,31 @@ export default function Home() {
   useEffect(() => {
     const cards = pageRef.current?.querySelectorAll<HTMLElement>(".product-card");
     if (!cards?.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const tween = gsap.fromTo(cards, { autoAlpha: 0, y: 28, scale: 0.97 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.065, ease: "power3.out", overwrite: "auto" });
+    const animationContext = gsap.context(() => {
+      cards.forEach((card, index) => {
+        const image = card.querySelector<HTMLElement>(".product-image");
+        const imageElement = image?.querySelector("img");
+        const details = card.querySelectorAll(".product-info h3, .product-info p, .product-info strong, .add-button");
+        if (!image || !imageElement) return;
+        const timeline = gsap.timeline({
+          scrollTrigger: {
+            trigger: card,
+            start: "top 90%",
+            end: "bottom 12%",
+            toggleActions: "restart none restart reverse",
+          },
+        });
+
+        timeline
+          .fromTo(card, { y: 58, scale: 0.955, rotation: index % 2 ? 1.4 : -1.4 }, { y: 0, scale: 1, rotation: 0, duration: 0.78, ease: "power3.out", overwrite: "auto" })
+          .fromTo(image, { clipPath: "inset(0 0 100% 0 round 10px)" }, { clipPath: "inset(0 0 0% 0 round 0px)", duration: 0.9, ease: "power4.inOut" }, 0)
+          .fromTo(imageElement, { scale: 1.14 }, { scale: 1, duration: 1.05, ease: "power3.out" }, 0)
+          .fromTo(details, { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.45, stagger: 0.065, ease: "power2.out" }, 0.36);
+      });
+      requestAnimationFrame(() => ScrollTrigger.refresh());
+    }, pageRef);
     return () => {
-      tween.kill();
+      animationContext.revert();
     };
   }, [shownProducts]);
 

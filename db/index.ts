@@ -1,13 +1,18 @@
-import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "./schema";
+import "server-only";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export function getDb() {
-  if (!env.DB) {
-    throw new Error(
-      "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
-    );
+let adminClient: SupabaseClient | null = null;
+
+export function commerceConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+export function getSupabaseAdmin() {
+  if (!commerceConfigured()) throw new Error("Supabase commerce is not configured.");
+  if (!adminClient) {
+    adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
   }
-
-  return drizzle(env.DB, { schema });
+  return adminClient;
 }

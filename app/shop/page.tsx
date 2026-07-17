@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "../components/Header";
 import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const guide = [
   ["Everyday Essentials", "Oversized T-shirts, Basic T-shirts, Crop Tops, Tank Tops, Bodysuits, Shirts."],
@@ -25,12 +26,42 @@ const products = [
   { name: "Black Oval sunglass", categories: ["Accessories", "Everyday Essentials", "Trending"], price: "₹899", badge: "Retro", img: "/black-oval-sunglasses.png", href: "/shop" },
 ];
 
-export default function ShopPage() {
-  const [active, setActive] = useState("All collections");
+const sortOptions = [
+  ["featured", "Featured"],
+  ["newest", "Newest"],
+  ["price-asc", "Price: Low to High"],
+  ["price-desc", "Price: High to Low"],
+  ["name", "Name: A–Z"],
+] as const;
 
-  const visible = active === "All collections" 
-    ? products 
-    : products.filter((p) => p.categories.includes(active));
+export default function ShopPage() {
+  const pageRef = useRef<HTMLElement>(null);
+  const [active, setActive] = useState("All collections");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<(typeof sortOptions)[number][0]>("featured");
+
+  const visible = useMemo(() => {
+    const filtered = active === "All collections"
+      ? [...products]
+      : products.filter((product) => product.categories.includes(active));
+    const price = (value: string) => Number(value.replace(/[^0-9]/g, ""));
+    if (sortBy === "newest") return filtered.sort((a, b) => Number(b.badge === "New") - Number(a.badge === "New"));
+    if (sortBy === "price-asc") return filtered.sort((a, b) => price(a.price) - price(b.price));
+    if (sortBy === "price-desc") return filtered.sort((a, b) => price(b.price) - price(a.price));
+    if (sortBy === "name") return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    return filtered;
+  }, [active, sortBy]);
+
+  const selectCategory = (category: string) => {
+    setActive(category);
+    setFilterOpen(false);
+  };
+
+  const selectSort = (sort: (typeof sortOptions)[number][0]) => {
+    setSortBy(sort);
+    setSortOpen(false);
+  };
 
   useEffect(() => {
     let initialCategory = "";
@@ -57,21 +88,35 @@ export default function ShopPage() {
   }, []);
 
   useEffect(() => {
-    gsap.fromTo(".catalog-card",
-      { opacity: 0, y: 25 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        stagger: 0.06,
-        ease: "power2.out",
-        overwrite: "auto"
-      }
-    );
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    gsap.registerPlugin(ScrollTrigger);
+    const context = gsap.context(() => {
+      const cards = gsap.utils.toArray<HTMLElement>(".catalog-card");
+      cards.forEach((card, index) => {
+        const image = card.querySelector<HTMLElement>(".catalog-image");
+        const imageElement = image?.querySelector("img");
+        const details = card.querySelectorAll("h3, p, strong");
+        if (!image || !imageElement) return;
+        gsap.timeline({
+          scrollTrigger: {
+            trigger: card,
+            start: "top 90%",
+            end: "bottom 12%",
+            toggleActions: "restart none restart reverse",
+          },
+        })
+          .fromTo(card, { y: 58, scale: 0.955, rotation: index % 2 ? 1.4 : -1.4 }, { y: 0, scale: 1, rotation: 0, duration: 0.78, ease: "power3.out", overwrite: "auto" })
+          .fromTo(image, { clipPath: "inset(0 0 100% 0 round 10px)" }, { clipPath: "inset(0 0 0% 0 round 0px)", duration: 0.9, ease: "power4.inOut" }, 0)
+          .fromTo(imageElement, { scale: 1.14 }, { scale: 1, duration: 1.05, ease: "power3.out" }, 0)
+          .fromTo(details, { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.45, stagger: 0.065, ease: "power2.out" }, 0.36);
+      });
+      requestAnimationFrame(() => ScrollTrigger.refresh());
+    }, pageRef);
+    return () => context.revert();
   }, [visible]);
 
   return (
-    <main>
+    <main ref={pageRef}>
       <Header activeTab="shop" />
 
       <section className="guide" id="catalog">
@@ -79,9 +124,31 @@ export default function ShopPage() {
           <span className="eyebrow">EXPLORE THE EDIT</span>
           <h2>Shop by <i>category</i></h2>
           <p>Every piece is chosen to help you build a wardrobe that feels unmistakably yours.</p>
+          <div className="mobile-shop-controls">
+            <button
+              className="mobile-filter-toggle"
+              type="button"
+              aria-expanded={filterOpen}
+              aria-controls="mobile-category-filters"
+              onClick={() => { setFilterOpen((open) => !open); setSortOpen(false); }}
+            >
+              <span>Filter</span>
+              <b>{filterOpen ? "−" : "+"}</b>
+            </button>
+            <button
+              className="mobile-sort-toggle"
+              type="button"
+              aria-expanded={sortOpen}
+              aria-controls="mobile-sort-options"
+              onClick={() => { setSortOpen((open) => !open); setFilterOpen(false); }}
+            >
+              <span>Sort</span>
+              <b>{sortOpen ? "−" : "+"}</b>
+            </button>
+          </div>
         </div>
-        <div className="guide-grid">
-          <button className={active === "All collections" ? "selected" : ""} onClick={() => setActive("All collections")}>
+        <div className={`guide-grid ${filterOpen ? "is-open" : ""}`} id="mobile-category-filters">
+          <button className={active === "All collections" ? "selected" : ""} onClick={() => selectCategory("All collections")}>
             <span>00</span>
             <div>
               <strong>All Collections</strong>
@@ -90,13 +157,26 @@ export default function ShopPage() {
             <b>→</b>
           </button>
           {guide.map(([title, text]) => (
-            <button className={active === title ? "selected" : ""} onClick={() => setActive(title)} key={title}>
+            <button className={active === title ? "selected" : ""} onClick={() => selectCategory(title)} key={title}>
               <span>{String(guide.findIndex((g) => g[0] === title) + 1).padStart(2, "0")}</span>
               <div>
                 <strong>{title}</strong>
                 <small>{text}</small>
               </div>
               <b>→</b>
+            </button>
+          ))}
+        </div>
+        <div className={`mobile-sort-panel ${sortOpen ? "is-open" : ""}`} id="mobile-sort-options">
+          {sortOptions.map(([value, label]) => (
+            <button
+              type="button"
+              className={sortBy === value ? "selected" : ""}
+              onClick={() => selectSort(value)}
+              key={value}
+            >
+              <span>{label}</span>
+              <b>{sortBy === value ? "✓" : ""}</b>
             </button>
           ))}
         </div>
