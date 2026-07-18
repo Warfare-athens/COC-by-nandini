@@ -15,6 +15,20 @@
       "when": 1784303179511,
       "tag": "0001_sturdy_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784376283234,
+      "tag": "0002_large_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784380050551,
+      "tag": "0003_clammy_angel",
+      "breakpoints": true
     }
   ]
 }

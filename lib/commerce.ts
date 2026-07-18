@@ -110,7 +110,7 @@ export async function adminDashboardData() {
   const supabase = getSupabaseAdmin();
   const [{ data: orders }, { data: products }, { count: lowStockCount }] = await Promise.all([
     supabase.from("orders").select("id,order_number,email,status,fulfillment_status,total_inr,placed_at").order("placed_at", { ascending: false }).limit(12),
-    supabase.from("products").select("id,name,slug,status,price_inr,hero_image_url,is_best_seller,is_new_arrival,is_featured,updated_at").order("updated_at", { ascending: false }).limit(12),
+    supabase.from("products").select("id,name,slug,status,price_inr,compare_at_price_inr,hero_image_url,tags,is_best_seller,is_new_arrival,is_featured,updated_at,product_variants(inventory_quantity),product_categories(categories(name))").order("updated_at", { ascending: false }).limit(50),
     supabase.from("product_variants").select("id", { count: "exact", head: true }).lte("inventory_quantity", 3),
   ]);
   return { configured: true, orders: orders || [], products: products || [], revenue: (orders || []).reduce((sum, order) => sum + Number(order.total_inr || 0), 0), orderCount: orders?.length || 0, lowStockCount: lowStockCount || 0 };

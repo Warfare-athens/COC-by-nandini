@@ -5,26 +5,33 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const guide = [
-  ["Everyday Essentials", "Oversized T-shirts, Basic T-shirts, Crop Tops, Tank Tops, Bodysuits, Shirts."],
-  ["Bottom Wear", "Straight, Wide-leg, Mom-fit, Baggy & Flared Jeans, Denim Shorts, Trousers, Cargo Pants, Palazzo Pants, Skirts."],
-  ["Dresses", "Bodycon, A-line, Maxi, Midi, Shirt, Wrap, Slip, Party Dresses."],
+  ["Top Wear", "Shirts, T-shirts, Crop Tops, Tank Tops and Bodysuits."],
+  [
+    "Bottom Wear",
+    "Straight, Wide-leg, Mom-fit, Baggy & Flared Jeans, Denim Shorts, Trousers, Cargo Pants, Palazzo Pants, Skirts.",
+  ],
+  ["Indian", "Kurtis, Kurta Sets, Sarees, Lehenga Sets, Anarkali Suits and Dupattas."],
+  ["Korean", "Korean Tops, Korean Dresses, Korean Co-ords, Oversized Shirts and Pleated Skirts."],
+  ["Dresses", "Dresses."],
   ["Co-ord Sets", "Shirt & Trouser, Crop Top & Skirt, Blazer, Lounge Sets."],
-  ["Party Wear", "Sequin Tops, Satin Tops, Corset Tops, Cocktail Dresses, Jumpsuits, Playsuits."],
-  ["Trending", "Oversized Graphic T-shirts, Baggy/Wide-leg Jeans, Co-ord Sets, Linen Shirts, Cargo Pants, Ribbed Tops, Satin Shirts, Corset Tops, Maxi Dresses, Denim Jackets, Korean style."],
-  ["Accessories", "Handbags, Belts, Sunglasses, Caps, Fashion Jewellery, Hair Accessories, Scarves, Socks."],
+  [
+    "Trending",
+    "Oversized Graphic T-shirts, Baggy/Wide-leg Jeans, Co-ord Sets, Linen Shirts, Cargo Pants, Ribbed Tops, Satin Shirts, Corset Tops, Maxi Dresses, Denim Jackets, Korean style.",
+  ],
+  [
+    "Accessories",
+    "Handbags, Belts, Sunglasses, Caps, Fashion Jewellery, Hair Accessories, Scarves, Socks.",
+  ],
 ];
 
-const products = [
-  { name: "Rose Pink Blazer Co-ord", categories: ["Co-ord Sets", "Trending"], price: "₹4,999", badge: "New", img: "/rose-pink-coord.png", href: "/product/rose-pink-co-ord-set" },
-  { name: "Ivory Power Suit Co-ord", categories: ["Co-ord Sets", "Party Wear", "Trending"], price: "₹5,499", badge: "New", img: "/ivory-coord.png", href: "/product/ivory-double-breasted-co-ord-set" },
-  { name: "Midnight One-Shoulder Maxi", categories: ["Dresses", "Party Wear"], price: "₹4,499", badge: "New", img: "/midnight-maxi-dress.png", href: "/product/black-one-shoulder-maxi-dress" },
-  { name: "Classic Leather Shoulder Bag", categories: ["Everyday Essentials", "Accessories"], price: "₹2,999", badge: "Classic", img: "/classic-leather-bag.png", href: "/shop" },
-  { name: "Oversized Denim Streetwear Set", categories: ["Everyday Essentials", "Trending"], price: "₹5,899", badge: "Trending", img: "/streetwear-denim-set.jpg", href: "/shop" },
-  { name: "Minimalist Cotton Dress", categories: ["Dresses", "Everyday Essentials"], price: "₹3,999", badge: "Clean", img: "/minimalist-cotton-dress.jpg", href: "/shop" },
-  { name: "Wide-leg Linen Trousers", categories: ["Bottom Wear", "Everyday Essentials"], price: "₹3,499", badge: "Cozy", img: "/wide-leg-trousers.png", href: "/shop" },
-  { name: "Cocktail Party Dress", categories: ["Party Wear", "Dresses"], price: "₹6,299", badge: "Party", img: "/cocktail-dress.png", href: "/shop" },
-  { name: "Black Oval sunglass", categories: ["Accessories", "Everyday Essentials", "Trending"], price: "₹899", badge: "Retro", img: "/black-oval-sunglasses.png", href: "/shop" },
-];
+type ShopProduct = {
+  name: string;
+  categories: string[];
+  price: string;
+  badge: string;
+  img: string;
+  href: string;
+};
 
 const sortOptions = [
   ["featured", "Featured"],
@@ -39,19 +46,67 @@ export default function ShopPage() {
   const [active, setActive] = useState("All collections");
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<(typeof sortOptions)[number][0]>("featured");
+  const [sortBy, setSortBy] =
+    useState<(typeof sortOptions)[number][0]>("featured");
+  const [products, setProducts] = useState<ShopProduct[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/storefront/products", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((payload) => {
+        if (cancelled || !Array.isArray(payload.products)) return;
+        const live = payload.products.map(
+          (product: Record<string, unknown>) => {
+            const tags = Array.isArray(product.tags)
+              ? product.tags.map(String)
+              : [];
+            const category = tags.find((tag) => tag.startsWith("category:"))?.slice(9);
+            const subcategory = tags.find((tag) => tag.startsWith("subcategory:"))?.slice(12);
+            const occasions = tags.filter((tag) => tag.startsWith("occasion:")).map((tag) => tag.slice(9));
+            const categories = [category, subcategory, ...occasions, "Trending"].filter(Boolean) as string[];
+            return {
+              name: String(product.name),
+              categories: [...new Set(categories)],
+              price: `₹${Number(product.price_inr).toLocaleString("en-IN")}`,
+              badge: product.is_new_arrival
+                ? "New"
+                : product.is_best_seller
+                  ? "Best seller"
+                  : product.is_featured
+                    ? "Featured"
+                    : "",
+              img: String(product.hero_image_url || "/product.jpg"),
+              href: `/product/${String(product.slug)}`,
+            };
+          },
+        );
+        setProducts(live);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const visible = useMemo(() => {
-    const filtered = active === "All collections"
-      ? [...products]
-      : products.filter((product) => product.categories.includes(active));
+    const filtered =
+      active === "All collections"
+        ? [...products]
+        : products.filter((product) => product.categories.includes(active));
     const price = (value: string) => Number(value.replace(/[^0-9]/g, ""));
-    if (sortBy === "newest") return filtered.sort((a, b) => Number(b.badge === "New") - Number(a.badge === "New"));
-    if (sortBy === "price-asc") return filtered.sort((a, b) => price(a.price) - price(b.price));
-    if (sortBy === "price-desc") return filtered.sort((a, b) => price(b.price) - price(a.price));
-    if (sortBy === "name") return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === "newest")
+      return filtered.sort(
+        (a, b) => Number(b.badge === "New") - Number(a.badge === "New"),
+      );
+    if (sortBy === "price-asc")
+      return filtered.sort((a, b) => price(a.price) - price(b.price));
+    if (sortBy === "price-desc")
+      return filtered.sort((a, b) => price(b.price) - price(a.price));
+    if (sortBy === "name")
+      return filtered.sort((a, b) => a.name.localeCompare(b.name));
     return filtered;
-  }, [active, sortBy]);
+  }, [active, sortBy, products]);
 
   const selectCategory = (category: string) => {
     setActive(category);
@@ -68,17 +123,19 @@ export default function ShopPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const cat = params.get("category");
+      const occasion = params.get("occasion");
+      if (occasion) initialCategory = decodeURIComponent(occasion);
       if (cat) {
         const decoded = decodeURIComponent(cat);
-        const found = guide.find((g) => g[0].toLowerCase() === decoded.toLowerCase());
+        const found = guide.find(
+          (g) => g[0].toLowerCase() === decoded.toLowerCase(),
+        );
         if (found) {
           initialCategory = found[0];
         } else if (decoded.toLowerCase() === "all") {
           initialCategory = "All collections";
-        } else if (decoded.toLowerCase() === "korean") {
-          initialCategory = "Trending";
-        } else if (decoded.toLowerCase() === "indian") {
-          initialCategory = "Party Wear";
+        } else if (decoded) {
+          initialCategory = decoded;
         }
       }
     }
@@ -97,18 +154,55 @@ export default function ShopPage() {
         const imageElement = image?.querySelector("img");
         const details = card.querySelectorAll("h3, p, strong");
         if (!image || !imageElement) return;
-        gsap.timeline({
-          scrollTrigger: {
-            trigger: card,
-            start: "top 90%",
-            end: "bottom 12%",
-            toggleActions: "restart none restart reverse",
-          },
-        })
-          .fromTo(card, { y: 58, scale: 0.955, rotation: index % 2 ? 1.4 : -1.4 }, { y: 0, scale: 1, rotation: 0, duration: 0.78, ease: "power3.out", overwrite: "auto" })
-          .fromTo(image, { clipPath: "inset(0 0 100% 0 round 10px)" }, { clipPath: "inset(0 0 0% 0 round 0px)", duration: 0.9, ease: "power4.inOut" }, 0)
-          .fromTo(imageElement, { scale: 1.14 }, { scale: 1, duration: 1.05, ease: "power3.out" }, 0)
-          .fromTo(details, { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.45, stagger: 0.065, ease: "power2.out" }, 0.36);
+        gsap
+          .timeline({
+            scrollTrigger: {
+              trigger: card,
+              start: "top 90%",
+              end: "bottom 12%",
+              toggleActions: "restart none restart reverse",
+            },
+          })
+          .fromTo(
+            card,
+            { y: 58, scale: 0.955, rotation: index % 2 ? 1.4 : -1.4 },
+            {
+              y: 0,
+              scale: 1,
+              rotation: 0,
+              duration: 0.78,
+              ease: "power3.out",
+              overwrite: "auto",
+            },
+          )
+          .fromTo(
+            image,
+            { clipPath: "inset(0 0 100% 0 round 10px)" },
+            {
+              clipPath: "inset(0 0 0% 0 round 0px)",
+              duration: 0.9,
+              ease: "power4.inOut",
+            },
+            0,
+          )
+          .fromTo(
+            imageElement,
+            { scale: 1.14 },
+            { scale: 1, duration: 1.05, ease: "power3.out" },
+            0,
+          )
+          .fromTo(
+            details,
+            { y: 18, autoAlpha: 0 },
+            {
+              y: 0,
+              autoAlpha: 1,
+              duration: 0.45,
+              stagger: 0.065,
+              ease: "power2.out",
+            },
+            0.36,
+          );
       });
       requestAnimationFrame(() => ScrollTrigger.refresh());
     }, pageRef);
@@ -122,15 +216,23 @@ export default function ShopPage() {
       <section className="guide" id="catalog">
         <div className="guide-title">
           <span className="eyebrow">EXPLORE THE EDIT</span>
-          <h2>Shop by <i>category</i></h2>
-          <p>Every piece is chosen to help you build a wardrobe that feels unmistakably yours.</p>
+          <h2>
+            Shop by <i>category</i>
+          </h2>
+          <p>
+            Every piece is chosen to help you build a wardrobe that feels
+            unmistakably yours.
+          </p>
           <div className="mobile-shop-controls">
             <button
               className="mobile-filter-toggle"
               type="button"
               aria-expanded={filterOpen}
               aria-controls="mobile-category-filters"
-              onClick={() => { setFilterOpen((open) => !open); setSortOpen(false); }}
+              onClick={() => {
+                setFilterOpen((open) => !open);
+                setSortOpen(false);
+              }}
             >
               <span>Filter</span>
               <b>{filterOpen ? "−" : "+"}</b>
@@ -140,15 +242,24 @@ export default function ShopPage() {
               type="button"
               aria-expanded={sortOpen}
               aria-controls="mobile-sort-options"
-              onClick={() => { setSortOpen((open) => !open); setFilterOpen(false); }}
+              onClick={() => {
+                setSortOpen((open) => !open);
+                setFilterOpen(false);
+              }}
             >
               <span>Sort</span>
               <b>{sortOpen ? "−" : "+"}</b>
             </button>
           </div>
         </div>
-        <div className={`guide-grid ${filterOpen ? "is-open" : ""}`} id="mobile-category-filters">
-          <button className={active === "All collections" ? "selected" : ""} onClick={() => selectCategory("All collections")}>
+        <div
+          className={`guide-grid ${filterOpen ? "is-open" : ""}`}
+          id="mobile-category-filters"
+        >
+          <button
+            className={active === "All collections" ? "selected" : ""}
+            onClick={() => selectCategory("All collections")}
+          >
             <span>00</span>
             <div>
               <strong>All Collections</strong>
@@ -157,8 +268,17 @@ export default function ShopPage() {
             <b>→</b>
           </button>
           {guide.map(([title, text]) => (
-            <button className={active === title ? "selected" : ""} onClick={() => selectCategory(title)} key={title}>
-              <span>{String(guide.findIndex((g) => g[0] === title) + 1).padStart(2, "0")}</span>
+            <button
+              className={active === title ? "selected" : ""}
+              onClick={() => selectCategory(title)}
+              key={title}
+            >
+              <span>
+                {String(guide.findIndex((g) => g[0] === title) + 1).padStart(
+                  2,
+                  "0",
+                )}
+              </span>
               <div>
                 <strong>{title}</strong>
                 <small>{text}</small>
@@ -167,7 +287,10 @@ export default function ShopPage() {
             </button>
           ))}
         </div>
-        <div className={`mobile-sort-panel ${sortOpen ? "is-open" : ""}`} id="mobile-sort-options">
+        <div
+          className={`mobile-sort-panel ${sortOpen ? "is-open" : ""}`}
+          id="mobile-sort-options"
+        >
           {sortOptions.map(([value, label]) => (
             <button
               type="button"
@@ -195,7 +318,11 @@ export default function ShopPage() {
             <a href={p.href} className="catalog-card" key={p.name}>
               <div className="catalog-image">
                 {p.badge && <em>{p.badge}</em>}
-                <img src={p.img} alt={p.name} style={{objectPosition: `${15 + i * 11}% center`}}/>
+                <img
+                  src={p.img}
+                  alt={p.name}
+                  style={{ objectPosition: `${15 + i * 11}% center` }}
+                />
                 <button onClick={(e) => e.preventDefault()}>♡</button>
               </div>
               <h3>{p.name}</h3>

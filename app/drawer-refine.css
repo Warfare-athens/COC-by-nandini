@@ -130,3 +130,4 @@
     max-height: calc(100vh - 145px);
   }
 }
+.admin-menu-occasion-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:5px 4px 12px}.admin-menu-occasion-tabs a{display:flex!important;justify-content:center!important;border:1px solid #d7aaa0!important;border-radius:999px;padding:10px!important;color:#9f5d57!important;font-size:10px!important;font-weight:700;text-transform:uppercase}.admin-menu-occasion-tabs a:hover{background:#bb7068!important;color:#fff!important}

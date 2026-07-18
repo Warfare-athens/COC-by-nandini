@@ -27,11 +27,12 @@ const MenuChevron = ({ className = "" }: { className?: string }) => (
 );
 
 const drawerCategories = [
-  { name: "Top Wear", img: "/top-wear-pink-floral.png", href: "/shop?category=Everyday%20Essentials", subcategories: ["Shirts", "Kurtis", "T-shirts", "Crop Tops", "Tank Tops", "Bodysuits"] },
+  { name: "Top Wear", img: "/top-wear-pink-floral.png", href: "/shop?category=Top%20Wear", subcategories: ["Shirts", "T-shirts", "Crop Tops", "Tank Tops", "Bodysuits"] },
   { name: "Bottom Wear", img: "/bottom-wear-category.png", href: "/shop?category=Bottom%20Wear", subcategories: ["Jeans", "Trousers", "Cargo Pants", "Palazzo Pants", "Skirts", "Shorts"] },
   { name: "Indian", img: "/indian-suits.png", href: "/shop?category=Indian", subcategories: ["Kurtis", "Kurta Sets", "Sarees", "Lehenga Sets", "Anarkali Suits", "Dupattas"] },
   { name: "Korean", img: "/korean-suit-style.png", href: "/shop?category=Korean", subcategories: ["Korean Tops", "Korean Dresses", "Korean Co-ords", "Oversized Shirts", "Pleated Skirts"] },
-  { name: "Party Wear", img: "/party-wear-red-dress.png", href: "/shop?category=Party%20Wear", subcategories: ["Party Dresses", "Cocktail Dresses", "Sequin Tops", "Satin Tops", "Corset Tops", "Jumpsuits", "Playsuits"] },
+  { name: "Dresses", img: "/party-wear-red-dress.png", href: "/shop?category=Dresses" },
+  { name: "Co-ord Sets", img: "/combos-co-ords.png", href: "/shop?category=Co-ord%20Sets" },
   { name: "Accessories", img: "/accessories-gold-jewelry.jpg", href: "/shop?category=Accessories", subcategories: ["Handbags", "Jewellery", "Sunglasses", "Belts", "Hair Accessories", "Scarves"] },
   { name: "COMBO", img: "/combos-co-ords.png", href: "/shop?category=Co-ord%20Sets", uppercase: true },
   { name: "OFFERS", img: "/special-offers-deals.jpg", href: "/shop?category=Trending", featured: true, uppercase: true },
@@ -248,21 +249,19 @@ export default function Header({ activeTab }: HeaderProps) {
   return (
     <>
       {announcement && <div className="shipping">✦ &nbsp; {announcement} &nbsp; ✦</div>}
-      <header className="nav">
-        <button className="icon-button menu-trigger" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
-          <span className="modern-menu"><i/><i/><i/></span>
+      <header className="nav" style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr" }}>
+        <button className="icon-button menu-trigger" aria-label="Open menu" onClick={() => setMenuOpen(true)} style={{ display: "grid", placeItems: "center", justifySelf: "start" }}>
+          <svg aria-hidden="true" width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="#3a2926" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M1 3h30" />
+            <path d="M1 12h21" />
+            <path d="M1 21h30" />
+          </svg>
         </button>
-        <a className="logo" href="/" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <a className="logo" href="/" style={{ display: "flex", flexDirection: "column", alignItems: "center", gridColumn: 2, justifySelf: "center" }}>
           <span style={{ display: "block" }}>{splitText("Carnival of Clothes", "logo-char-main")}</span>
           <Signature />
         </a>
-        <nav className="links">
-          <a href="/" className={activeTab === "home" ? "active-link" : ""}>Home</a>
-          <a href="/shop" className={activeTab === "shop" ? "active-link" : ""}>Shop All</a>
-          <a href="/#story">Our Story</a>
-          <a href="/#contact">Contact</a>
-        </nav>
-        <div className="actions">
+        <div className="actions" style={{ gridColumn: 3, justifySelf: "end" }}>
           <button className="icon-button" aria-label="Search" onClick={() => setSearch(!search)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
@@ -312,6 +311,10 @@ export default function Header({ activeTab }: HeaderProps) {
               </button>
             </div>
             <div className="drawer-links drawer-categories !mt-0 !min-h-0 !flex-1 !overflow-x-hidden !border-t-0 !pt-2 [&_span]:!font-['Work_Sans'] [&_span]:!text-[12px] [&_span]:!font-normal [&_span]:!tracking-normal">
+              <div className="admin-menu-occasion-tabs">
+                <a href="/shop?occasion=Everyday" onClick={() => setMenuOpen(false)}>Everyday</a>
+                <a href="/shop?occasion=Party%20Wear" onClick={() => setMenuOpen(false)}>Party Wear</a>
+              </div>
               {drawerCategories.map((category) => {
                 const expanded = openCategory === category.name;
 

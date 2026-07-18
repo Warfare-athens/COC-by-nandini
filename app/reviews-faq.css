@@ -5,7 +5,8 @@
 .info-row {
   border-bottom: 1px solid var(--line);
 }
-.info-row button, .faq-item button {
+.info-row button,
+.faq-item button {
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -14,7 +15,8 @@
   padding: 17px 4px;
   font-size: 13px;
 }
-.info-row button b, .faq-item button b {
+.info-row button b,
+.faq-item button b {
   font-size: 20px;
   font-weight: 400;
   color: #6c5750;
@@ -40,18 +42,22 @@
   justify-content: space-between;
   align-items: end;
 }
-.reviews-head h2, .faq-heading h2 {
-  font: 400 35px 'Instrument Serif', serif;
+.reviews-head h2,
+.faq-heading h2 {
+  font:
+    400 35px "Instrument Serif",
+    serif;
   margin: 10px 0;
 }
-.reviews-head h2 i, .faq-heading h2 i {
+.reviews-head h2 i,
+.faq-heading h2 i {
   color: var(--rose);
-  font-size: .8em;
+  font-size: 0.8em;
 }
-.reviews-head>a {
+.reviews-head > a {
   font-size: 12px;
   color: var(--rose);
-  letter-spacing: .1em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 .review-summary {
@@ -63,12 +69,17 @@
   padding-bottom: 32px;
 }
 .score {
-  font: 400 56px 'Instrument Serif', serif;
+  font:
+    400 56px "Instrument Serif",
+    serif;
   color: #4b3934;
 }
-.score strong, .score small {
+.score strong,
+.score small {
   display: block;
-  font: 400 18px 'Work Sans', sans-serif;
+  font:
+    400 18px "Work Sans",
+    sans-serif;
   color: #c89452;
   letter-spacing: 3px;
   margin-top: 8px;
@@ -82,7 +93,7 @@
   max-width: 540px;
   padding-top: 8px;
 }
-.bars>div {
+.bars > div {
   display: grid;
   grid-template-columns: 35px 1fr 40px;
   align-items: center;
@@ -124,7 +135,9 @@
   color: white;
   font-size: 12px;
 }
-.review-card>b, .review-card span, .review-card small {
+.review-card > b,
+.review-card span,
+.review-card small {
   display: inline-block;
 }
 .review-card b {
@@ -154,7 +167,7 @@
   color: #66534d;
   margin: 10px 0;
 }
-.review-card>img {
+.review-card > img {
   width: 120px;
   height: 120px;
   object-fit: cover;
@@ -182,7 +195,7 @@
 }
 .faq-item button {
   padding: 20px 5px;
-  font-family: 'Instrument Serif', serif;
+  font-family: "Instrument Serif", serif;
   font-size: 16px;
 }
 .faq-item p {
@@ -197,12 +210,43 @@
   color: var(--rose);
 }
 
-@media(max-width: 800px) {
+.review-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  border: 1px solid var(--line);
+  background: #fffaf6;
+  color: #806f69;
+  text-align: center;
+}
+.review-empty span {
+  color: var(--gold);
+  font-size: 34px;
+}
+.review-empty h3 {
+  margin: 10px 0 4px;
+  font:
+    400 24px "Instrument Serif",
+    serif;
+  color: #733b36;
+}
+.review-empty p {
+  margin: 0;
+  font-size: 11px;
+}
+.product-review-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+@media (max-width: 800px) {
   .reviews {
     margin: 0 12px 45px;
     padding: 35px 0;
   }
-  .reviews-head h2, .faq-heading h2 {
+  .reviews-head h2,
+  .faq-heading h2 {
     font-size: 30px;
   }
   .review-summary {
@@ -219,7 +263,7 @@
     grid-template-columns: 35px 1fr 80px;
     gap: 10px;
   }
-  .review-card>img {
+  .review-card > img {
     width: 80px;
     height: 80px;
   }

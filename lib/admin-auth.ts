@@ -4,7 +4,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const cookieName = "coc-admin";
-const signature = () => createHmac("sha256", process.env.ADMIN_COOKIE_SECRET || "unconfigured").update(process.env.ADMIN_ACCESS_KEY || "unconfigured").digest("hex");
+const signature = () => {
+  const accessKey = process.env.ADMIN_ACCESS_KEY || "unconfigured";
+  const cookieSecret = process.env.ADMIN_COOKIE_SECRET || accessKey;
+  return createHmac("sha256", cookieSecret).update("coc-admin-session").digest("hex");
+};
 
 export function validAdminKey(value: string) {
   const expected = Buffer.from(process.env.ADMIN_ACCESS_KEY || "");
@@ -23,7 +27,15 @@ export async function requireAdmin() {
 }
 
 export async function setAdminCookie() {
-  (await cookies()).set(cookieName, signature(), { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: "/admin", maxAge: 60 * 60 * 8 });
+  (await cookies()).set(cookieName, signature(), {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 8,
+  });
 }
 
-export async function clearAdminCookie() { (await cookies()).delete(cookieName); }
+export async function clearAdminCookie() {
+  (await cookies()).set(cookieName, "", { path: "/", maxAge: 0 });
+}

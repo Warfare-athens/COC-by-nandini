@@ -1,10 +1,49 @@
 import AdminShell from "@/app/components/AdminShell";
 import { requireAdmin } from "@/lib/admin-auth";
 import { adminDashboardData } from "@/lib/commerce";
+import { tagValue } from "@/lib/product-taxonomy";
 
-type ProductRow = { id: string; name: string; status: string; price_inr: number; is_best_seller: boolean; is_new_arrival: boolean; is_featured: boolean };
+type ProductRow = {
+  id: string;
+  name: string;
+  status: string;
+  price_inr: number;
+  hero_image_url: string;
+  tags: string[] | null;
+  product_categories: { categories: { name: string }[] }[];
+};
 
 export default async function AdminProductsPage() {
-  await requireAdmin(); const data = await adminDashboardData();
-  return <AdminShell><div className="admin-head"><div><h1>Products</h1><p>Create, publish and feature the catalog shown across the storefront.</p></div><a className="admin-button" href="/admin/products/new">Add product</a></div><section className="admin-panel"><table className="admin-table"><thead><tr><th>Product</th><th>Status</th><th>Price</th><th>Placement</th><th /></tr></thead><tbody>{data.products.map((product: ProductRow) => <tr key={product.id}><td>{product.name}</td><td><span className="admin-status">{product.status}</span></td><td>₹{Number(product.price_inr).toLocaleString("en-IN")}</td><td>{[product.is_best_seller && "Best seller", product.is_new_arrival && "New arrival", product.is_featured && "Featured"].filter(Boolean).join(" · ") || "—"}</td><td><a className="admin-link" href={`/admin/products/${product.id}`}>Edit</a></td></tr>)}{!data.products.length && <tr><td colSpan={5}>No database products yet. Add the first product after Supabase is connected.</td></tr>}</tbody></table></section></AdminShell>;
+  await requireAdmin();
+  const data = await adminDashboardData();
+  return (
+    <AdminShell>
+      <div className="admin-head">
+        <h1>Products</h1>
+        <a className="admin-button" href="/admin/products/new">Add product</a>
+      </div>
+      <section className="admin-product-catalog">
+        {data.products.map((product: ProductRow) => {
+          const databaseCategory = (product.product_categories || [])
+            .flatMap((item) => item.categories || [])[0]?.name;
+          const category = tagValue(product.tags, "category") || databaseCategory || "Uncategorised";
+          return (
+            <a className="admin-product-card" href={`/admin/products/${product.id}`} key={product.id}>
+              <span className="admin-product-card-image">
+                <img src={product.hero_image_url} alt={product.name} />
+                <span className="admin-product-edit-mark" aria-hidden="true">✎</span>
+                {product.status !== "active" && <span className="admin-product-draft">{product.status}</span>}
+              </span>
+              <span className="admin-product-card-copy">
+                <strong className="admin-product-name">{product.name}</strong>
+                <small>{category}</small>
+                <b>₹{Number(product.price_inr).toLocaleString("en-IN")}</b>
+              </span>
+            </a>
+          );
+        })}
+        {!data.products.length && <div className="admin-product-empty">No products yet. Add your first product.</div>}
+      </section>
+    </AdminShell>
+  );
 }
