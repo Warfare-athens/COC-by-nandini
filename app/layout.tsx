@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const publicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL;
+const publicSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || "https://www.carnivalofclothes.com").replace(/\/$/, "");
 
 export const metadata: Metadata = {
   ...(publicSiteUrl ? { metadataBase: new URL(publicSiteUrl), alternates: { canonical: "/" } } : {}),

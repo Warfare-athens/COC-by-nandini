@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL;
-  if (!siteUrl) return [];
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || "https://www.carnivalofclothes.com").replace(/\/$/, "");
   const lastModified = new Date();
   return [
     { url: siteUrl, lastModified, changeFrequency: "weekly", priority: 1 },
