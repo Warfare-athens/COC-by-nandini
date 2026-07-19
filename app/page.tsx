@@ -6,6 +6,7 @@ import { Signature } from "./components/Signature";
 import { addToCart } from "./cart-helper";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { showGlobalStatus } from "./global-status";
 
 type HomeProduct = {
   name: string;
@@ -24,6 +25,21 @@ type ProductImageSource = {
   primaryImage?: string | null;
   images?: Array<string | { url: string; isPrimary?: boolean }>;
 };
+
+const homeCategoryOptions = [
+  "All",
+  "Everyday",
+  "Party Wear",
+  "Dresses",
+  "Top Wear",
+  "Bottom Wear",
+  "Indian",
+  "Korean",
+  "Co-ord Sets",
+  "Accessories",
+  "COMBO",
+  "OFFERS",
+];
 
 // Render exactly one primary image per product, including future database rows.
 const getProductHeroImage = (product: ProductImageSource) => {
@@ -47,7 +63,6 @@ const getProductHeroImage = (product: ProductImageSource) => {
 export default function Home() {
   const [products, setProducts] = useState<HomeProduct[]>([]);
   const [activeCategory, setActiveCategory] = useState("All");
-  const [toast, setToast] = useState("");
   const pageRef = useRef<HTMLElement>(null);
   const showcaseRef = useRef<HTMLElement>(null);
   const showcaseItemsRef = useRef<Array<HTMLAnchorElement | null>>([]);
@@ -68,20 +83,17 @@ export default function Home() {
             const tags = Array.isArray(product.tags)
               ? product.tags.map(String)
               : [];
-            const searchable =
-              `${product.name || ""} ${tags.join(" ")}`.toLowerCase();
+            const searchable = `${product.name || ""} ${tags.join(" ")}`.toLowerCase();
+            const savedCategory = tags.find((tag) => tag.startsWith("category:"))?.slice(9);
+            const occasions = tags.filter((tag) => tag.startsWith("occasion:")).map((tag) => tag.slice(9));
             const categories = [
-              searchable.includes("dress") && "Dresses",
-              (searchable.includes("coord") || searchable.includes("co-ord")) &&
-                "Co-ords",
-              (searchable.includes("party") ||
-                searchable.includes("evening")) &&
-                "Party Wear",
-              (searchable.includes("trouser") ||
-                searchable.includes("jean") ||
-                searchable.includes("skirt")) &&
-                "Bottom Wear",
-              "Everyday",
+              savedCategory,
+              ...occasions,
+              !savedCategory && searchable.includes("dress") && "Dresses",
+              !occasions.length && (searchable.includes("party") || searchable.includes("evening")) && "Party Wear",
+              !savedCategory && (searchable.includes("trouser") || searchable.includes("jean") || searchable.includes("skirt")) && "Bottom Wear",
+              savedCategory === "Co-ord Sets" && "COMBO",
+              (product.is_featured || product.is_best_seller) && "OFFERS",
             ].filter(Boolean) as string[];
             return {
               name: String(product.name),
@@ -733,8 +745,14 @@ export default function Home() {
       img: product.img,
       size: "M",
     });
-    setToast(`${product.name} added to your bag`);
-    setTimeout(() => setToast(""), 2200);
+  };
+
+  const toggleSaved = (product: HomeProduct) => {
+    const key = "coc-saved-products";
+    const saved = JSON.parse(localStorage.getItem(key) || "[]") as string[];
+    const exists = saved.includes(product.href);
+    localStorage.setItem(key, JSON.stringify(exists ? saved.filter((href) => href !== product.href) : [...saved, product.href]));
+    showGlobalStatus(exists ? `${product.name} removed from saved items` : `${product.name} saved for later`, exists ? "info" : "success");
   };
 
   return (
@@ -902,14 +920,7 @@ export default function Home() {
         <div className="category-marquee">
           <div className="category-nav">
             <div className="category-group">
-              {[
-                "All",
-                "Everyday",
-                "Bottom Wear",
-                "Dresses",
-                "Co-ords",
-                "Party Wear",
-              ].map((c) => (
+              {homeCategoryOptions.map((c) => (
                 <button
                   className={activeCategory === c ? "active" : ""}
                   key={c}
@@ -920,14 +931,7 @@ export default function Home() {
               ))}
             </div>
             <div className="category-group" aria-hidden="true">
-              {[
-                "All",
-                "Everyday",
-                "Bottom Wear",
-                "Dresses",
-                "Co-ords",
-                "Party Wear",
-              ].map((c) => (
+              {homeCategoryOptions.map((c) => (
                 <button
                   className={activeCategory === c ? "active" : ""}
                   tabIndex={-1}
@@ -971,7 +975,7 @@ export default function Home() {
                   />
                   <button
                     aria-label="Add to wishlist"
-                    onClick={(e) => e.preventDefault()}
+                    onClick={(event) => { event.preventDefault(); toggleSaved(p); }}
                   >
                     ♡
                   </button>
@@ -1088,6 +1092,7 @@ export default function Home() {
           <a href="#shop">Collections</a>
           <a href="#shop">New arrivals</a>
           <a href="#story">About us</a>
+          <a href="/admin" target="_blank" rel="noopener noreferrer">Admin</a>
         </div>
         <div>
           <b>Customer care</b>
@@ -1108,7 +1113,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {toast && <div className="toast">♡ {toast}</div>}
     </main>
   );
 }

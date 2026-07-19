@@ -27,11 +27,11 @@ const MenuChevron = ({ className = "" }: { className?: string }) => (
 );
 
 const drawerCategories = [
+  { name: "Dresses", img: "/party-wear-red-dress.png", href: "/shop?category=Dresses" },
   { name: "Top Wear", img: "/top-wear-pink-floral.png", href: "/shop?category=Top%20Wear", subcategories: ["Shirts", "T-shirts", "Crop Tops", "Tank Tops", "Bodysuits"] },
   { name: "Bottom Wear", img: "/bottom-wear-category.png", href: "/shop?category=Bottom%20Wear", subcategories: ["Jeans", "Trousers", "Cargo Pants", "Palazzo Pants", "Skirts", "Shorts"] },
   { name: "Indian", img: "/indian-suits.png", href: "/shop?category=Indian", subcategories: ["Kurtis", "Kurta Sets", "Sarees", "Lehenga Sets", "Anarkali Suits", "Dupattas"] },
   { name: "Korean", img: "/korean-suit-style.png", href: "/shop?category=Korean", subcategories: ["Korean Tops", "Korean Dresses", "Korean Co-ords", "Oversized Shirts", "Pleated Skirts"] },
-  { name: "Dresses", img: "/party-wear-red-dress.png", href: "/shop?category=Dresses" },
   { name: "Co-ord Sets", img: "/combos-co-ords.png", href: "/shop?category=Co-ord%20Sets" },
   { name: "Accessories", img: "/accessories-gold-jewelry.jpg", href: "/shop?category=Accessories", subcategories: ["Handbags", "Jewellery", "Sunglasses", "Belts", "Hair Accessories", "Scarves"] },
   { name: "COMBO", img: "/combos-co-ords.png", href: "/shop?category=Co-ord%20Sets", uppercase: true },
@@ -370,7 +370,7 @@ export default function Header({ activeTab }: HeaderProps) {
                       <a className="!border-0" href={category.href} onClick={() => setMenuOpen(false)}>
                         <div className="drawer-cat-info">
                           <img src={category.img} alt={category.name} className="drawer-cat-img" style={catImgStyle} />
-                          <span className={`${category.featured ? "offer-highlight" : ""} ${category.uppercase ? "!uppercase" : ""}`}>{category.name}</span>
+                          <span className={`${category.featured ? "offer-highlight" : ""} ${category.uppercase ? "!uppercase" : "!normal-case"}`}>{category.name}</span>
                         </div>
                         <MenuChevron className="shrink-0 text-[#8b625a]" />
                       </a>

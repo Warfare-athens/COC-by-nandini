@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CartItem, getCartItems, removeFromCart, updateQuantity } from "../cart-helper";
+import { showGlobalStatus } from "../global-status";
 
 interface CartSheetProps {
   open: boolean;
@@ -50,7 +51,12 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
 
   const applyCoupon = () => {
     const normalized = coupon.trim().toUpperCase();
-    if (normalized === "COC100" && subtotal >= 999) setAppliedCoupon(normalized);
+    if (normalized === "COC100" && subtotal >= 999) {
+      setAppliedCoupon(normalized);
+      showGlobalStatus("Coupon applied successfully", "success");
+    } else {
+      showGlobalStatus(normalized === "COC100" ? "Add more items to use this coupon" : "Coupon code is not valid", "error");
+    }
   };
 
   return (

@@ -1,3 +1,5 @@
+import { showGlobalStatus } from "./global-status";
+
 export interface CartItem {
   name: string;
   price: string;
@@ -35,12 +37,14 @@ export function addToCart(item: Omit<CartItem, "quantity">) {
     items.push({ ...item, quantity: 1 });
   }
   saveCartItems(items);
+  showGlobalStatus(`${item.name} added to bag`, "success");
 }
 
 export function removeFromCart(name: string, size: string) {
   const items = getCartItems();
   const filtered = items.filter((i) => !(i.name === name && i.size === size));
   saveCartItems(filtered);
+  showGlobalStatus(`${name} removed from bag`, "info");
 }
 
 export function updateQuantity(name: string, size: string, delta: number) {
@@ -54,6 +58,7 @@ export function updateQuantity(name: string, size: string, delta: number) {
     }
   }
   saveCartItems(items);
+  showGlobalStatus("Bag quantity updated", "success", 1500);
 }
 
 export function getCartCount(): number {

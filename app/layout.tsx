@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import GlobalStatusLoader from "./components/GlobalStatusLoader";
 
 const publicSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || "https://www.carnivalofclothes.com").replace(/\/$/, "");
 
@@ -53,7 +54,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
         {brandSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(brandSchema) }} />}
       </head>
-      <body className="selection:bg-[#e8b9b2] selection:text-[#3a2926]">{children}</body>
+      <body className="selection:bg-[#e8b9b2] selection:text-[#3a2926]">
+        <GlobalStatusLoader />
+        {children}
+      </body>
     </html>
   );
 }

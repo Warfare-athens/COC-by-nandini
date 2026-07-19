@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { showGlobalStatus } from "@/app/global-status";
 import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, publicTags, tagValue, taxonomyTag } from "@/lib/product-taxonomy";
 
 type Variant = {
@@ -257,6 +258,7 @@ export default function AdminProductEditForm({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       setNotice("Product updated.");
+      showGlobalStatus("Product changes saved", "success");
       router.refresh();
     } catch (saveError) {
       setError(
@@ -265,6 +267,7 @@ export default function AdminProductEditForm({
           : "Unable to save product.",
       );
       setNotice("");
+      showGlobalStatus(saveError instanceof Error ? saveError.message : "Unable to save product", "error", 4000);
     } finally {
       setBusy(false);
     }

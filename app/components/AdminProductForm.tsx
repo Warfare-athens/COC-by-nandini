@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, taxonomyTag } from "@/lib/product-taxonomy";
+import { showGlobalStatus } from "@/app/global-status";
 
 type GeneratedFields = {
   slug: string;
@@ -95,6 +96,12 @@ export default function AdminProductForm() {
       compareAtPrice, isBestSeller, isNewArrival, isFeatured,
     }));
   }, [draftReady, name, priceInr, images, generated, sizeInventory, aiGenerated, compareAtPrice, isBestSeller, isNewArrival, isFeatured]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(busy ? "coc-loader-show" : "coc-loader-hide", {
+      detail: busy ? { message: statusText || "Working on product" } : undefined,
+    }));
+  }, [busy, statusText]);
 
   const update = (field: keyof GeneratedFields, value: string | string[]) =>
     setGenerated((current) => ({ ...current, [field]: value }));
@@ -216,7 +223,7 @@ export default function AdminProductForm() {
       const message = `Cannot publish yet. Add: ${missing.join(", ")}.`;
       setError(message);
       setStatusText("");
-      window.alert(message);
+      showGlobalStatus(message, "error", 4500);
       requestAnimationFrame(() => saveMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
       return;
     }
@@ -267,7 +274,7 @@ export default function AdminProductForm() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       localStorage.removeItem(productDraftKey);
-      window.alert("Product saved and published successfully.");
+      showGlobalStatus("Product saved and published successfully", "success");
       router.push("/admin/products");
       router.refresh();
     } catch (saveError) {
@@ -275,7 +282,7 @@ export default function AdminProductForm() {
           ? saveError.message
           : "Unable to save product.";
       setError(message);
-      window.alert(message);
+      showGlobalStatus(message, "error", 4500);
       requestAnimationFrame(() => saveMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
       setBusy(false);
       setStatusText("");
