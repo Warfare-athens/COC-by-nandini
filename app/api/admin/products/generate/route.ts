@@ -12,7 +12,7 @@ const requestSchema = z.object({
 const generatedProductSchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/),
   sku: z.string().min(3).max(32),
-  shortDescription: z.string().min(20).max(180),
+  shortDescription: z.string().min(20).max(100),
   description: z.string().min(80).max(2500),
   category: z.enum(["Top Wear", "Bottom Wear", "Indian", "Korean", "Dresses", "Co-ord Sets", "Accessories"]),
   subcategory: z.enum(["", "Shirts", "T-shirts", "Crop Tops", "Tank Tops", "Bodysuits", "Jeans", "Trousers", "Cargo Pants", "Palazzo Pants", "Skirts", "Shorts", "Kurtis", "Kurta Sets", "Sarees", "Lehenga Sets", "Anarkali Suits", "Dupattas", "Korean Tops", "Korean Dresses", "Korean Co-ords", "Oversized Shirts", "Pleated Skirts", "Handbags", "Jewellery", "Sunglasses", "Belts", "Hair Accessories", "Scarves"]),
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     const trimText = (key: string, maximum: number) => {
       if (typeof raw[key] === "string") raw[key] = raw[key].slice(0, maximum).trim();
     };
-    trimText("shortDescription", 180);
+    trimText("shortDescription", 100);
     trimText("description", 2500);
     trimText("material", 120);
     trimText("careInstructions", 500);

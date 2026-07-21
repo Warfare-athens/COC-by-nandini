@@ -67,26 +67,30 @@ export default function AdminProductForm() {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(productDraftKey) || "null");
-      if (saved) {
-        setName(saved.name || "");
-        setPriceInr(saved.priceInr || "");
-        setImages(Array.isArray(saved.images) ? saved.images : []);
-        setGenerated({ ...emptyGenerated, ...(saved.generated || {}) });
-        setSizeInventory(Array.isArray(saved.sizeInventory) ? saved.sizeInventory : []);
-        setAiGenerated(Boolean(saved.aiGenerated));
-        setCompareAtPrice(saved.compareAtPrice || "");
-        setIsBestSeller(Boolean(saved.isBestSeller));
-        setIsNewArrival(Boolean(saved.isNewArrival));
-        setIsFeatured(Boolean(saved.isFeatured));
-        setStatusText("Unfinished product restored automatically.");
+    const restoreDraft = window.setTimeout(() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(productDraftKey) || "null");
+        if (saved) {
+          setName(saved.name || "");
+          setPriceInr(saved.priceInr || "");
+          setImages(Array.isArray(saved.images) ? saved.images : []);
+          setGenerated({ ...emptyGenerated, ...(saved.generated || {}) });
+          setSizeInventory(Array.isArray(saved.sizeInventory) ? saved.sizeInventory : []);
+          setAiGenerated(Boolean(saved.aiGenerated));
+          setCompareAtPrice(saved.compareAtPrice || "");
+          setIsBestSeller(Boolean(saved.isBestSeller));
+          setIsNewArrival(Boolean(saved.isNewArrival));
+          setIsFeatured(Boolean(saved.isFeatured));
+          setStatusText("Unfinished product restored automatically.");
+        }
+      } catch {
+        localStorage.removeItem(productDraftKey);
+      } finally {
+        setDraftReady(true);
       }
-    } catch {
-      localStorage.removeItem(productDraftKey);
-    } finally {
-      setDraftReady(true);
-    }
+    }, 0);
+
+    return () => window.clearTimeout(restoreDraft);
   }, []);
 
   useEffect(() => {
@@ -435,6 +439,7 @@ export default function AdminProductForm() {
               <label>Short description</label>
               <input
                 value={generated.shortDescription}
+                maxLength={100}
                 onChange={(event) =>
                   update("shortDescription", event.target.value)
                 }

@@ -380,6 +380,14 @@ export default function Header({ activeTab }: HeaderProps) {
               })}
             </div>
             <div className="drawer-footer-links !mt-auto !flex !flex-col !items-stretch !gap-2 !pb-0">
+              <a className="account-button" href="/blog" onClick={() => setMenuOpen(false)}>
+                <span>Fashion Journal</span>
+                <span className="account-icon">→</span>
+              </a>
+              <a className="account-button" href="/ahmedabad" onClick={() => setMenuOpen(false)}>
+                <span>Ahmedabad Store</span>
+                <span className="account-icon">→</span>
+              </a>
               <div className="drawer-order-links">
                 <a className="track-order-link" href="/track-order" onClick={() => setMenuOpen(false)}>
                   <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

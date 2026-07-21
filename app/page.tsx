@@ -7,6 +7,8 @@ import { addToCart } from "./cart-helper";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { showGlobalStatus } from "./global-status";
+import { BLOG_POSTS } from "@/lib/blogs";
+import journalStyles from "./components/HomeJournal.module.css";
 
 type HomeProduct = {
   name: string;
@@ -764,13 +766,12 @@ export default function Home() {
           <span className="eyebrow">THE NEW SEASON EDIT</span>
           <h1
             className="hero-shimmer"
-            aria-label="Style Everyday with Elegance"
+            aria-label="Celebrate your style Everyday"
           >
-            <span>{animatedLetters("Style Everyday", "style")}</span>
+            <span>{animatedLetters("Celebrate your style", "style")}</span>
             <br aria-hidden="true" />
             <span>
-              {animatedLetters("with ", "with")}
-              <i>{animatedLetters("Elegance", "elegance")}</i>
+              <i>{animatedLetters("Everyday", "elegance")}</i>
             </span>
           </h1>
           <p>
@@ -803,10 +804,10 @@ export default function Home() {
           <span className="eyebrow">OUR COLLECTION</span>
           <h2
             className="letter-heading"
-            aria-label="Curated Styles For Every You"
+            aria-label="Your Fashion Partner for Every Occasion"
           >
-            {animatedHeadingWords("Curated Styles", "collections")}{" "}
-            <i>{animatedHeadingWords("For Every You", "collections-accent")}</i>
+            {animatedHeadingWords("Your Fashion Partner", "collections")}{" "}
+            <i>{animatedHeadingWords("for Every Occasion", "collections-accent")}</i>
           </h2>
           <div className="collection-grid">
             {[
@@ -1050,6 +1051,38 @@ export default function Home() {
         <div className="section-index">02</div>
       </section>
 
+      <section className={journalStyles.section} aria-labelledby="home-journal-title">
+        <div className={journalStyles.heading}>
+          <div>
+            <span className="eyebrow">THE CARNIVAL JOURNAL</span>
+            <h2 id="home-journal-title">Style notes for <i>every you</i></h2>
+          </div>
+          <a className={journalStyles.allLink} href="/blog">Explore all 100 guides&nbsp; →</a>
+        </div>
+        <div className={journalStyles.grid}>
+          {BLOG_POSTS.slice(0, 3).map((post) => (
+            <article className={journalStyles.card} key={post.slug}>
+              <a href={`/blog/${post.slug}`}>
+                <div className={journalStyles.imageFrame}>
+                  <img src={post.image} alt={post.imageAlt} loading="lazy" />
+                </div>
+                <span className={journalStyles.meta}>{post.category} · {post.readTime}</span>
+                <h3>{post.title}</h3>
+                <p>{post.excerpt}</p>
+                <b className={journalStyles.readLink}>Read guide →</b>
+              </a>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-b border-[#e8cdbc] bg-[#f7e6df] px-[10%] py-10 text-center" aria-label="Carnival of Clothes Ahmedabad location">
+        <span className="text-[10px] font-semibold tracking-[.2em] text-[#bb7068]">PROUDLY BASED IN AHMEDABAD</span>
+        <h2 className="mx-auto my-3 font-['Instrument_Serif'] text-3xl font-normal text-[#733b36] md:text-4xl">Women’s fashion from the heart of Ahmedabad</h2>
+        <p className="mx-auto max-w-2xl text-sm leading-7 text-[#66534d]">Discover curated dresses, co-ord sets, Indian wear, Korean-inspired styles and occasion clothing from Carnival of Clothes by Nandini.</p>
+        <a className="mt-4 inline-block text-[10px] font-semibold uppercase tracking-[.14em] text-[#bb7068]" href="/ahmedabad">Explore our Ahmedabad store →</a>
+      </section>
+
       <section className="perks">
         <div>
           <span>♢</span>
@@ -1085,13 +1118,16 @@ export default function Home() {
           >
             Carnival of Clothes <Signature />
           </a>
-          <p>Curated collections that make every celebration unforgettable.</p>
+          <p>Ahmedabad-based curated collections that make every celebration unforgettable.</p>
+          <a href="/ahmedabad">Women’s clothing store in Ahmedabad</a>
         </div>
         <div>
           <b>Quick links</b>
           <a href="#shop">Collections</a>
           <a href="#shop">New arrivals</a>
           <a href="#story">About us</a>
+          <a href="/blog">Fashion journal</a>
+          <a href="/ahmedabad">Ahmedabad store</a>
           <a href="/admin" target="_blank" rel="noopener noreferrer">Admin</a>
         </div>
         <div>

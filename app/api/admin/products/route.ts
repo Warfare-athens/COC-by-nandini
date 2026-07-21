@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const productSchema = z.object({
   name: z.string().min(2), slug: z.string().min(2).regex(/^[a-z0-9-]+$/), sku: z.string().min(2),
-  shortDescription: z.string().optional(), description: z.string().optional(), heroImageUrl: z.string().url().or(z.string().startsWith("/")),
+  shortDescription: z.string().max(100).optional(), description: z.string().optional(), heroImageUrl: z.string().url().or(z.string().startsWith("/")),
   priceInr: z.number().int().positive(), compareAtPriceInr: z.number().int().positive().optional(), status: z.enum(["draft", "active", "archived"]),
   isBestSeller: z.boolean(), isNewArrival: z.boolean(), isFeatured: z.boolean(), sizes: z.array(z.string()).default([]), inventoryQuantity: z.number().int().min(0).default(0),
   sizeInventory: z.array(z.object({ size: z.string().min(1), quantity: z.number().int().min(0) })).default([]),
