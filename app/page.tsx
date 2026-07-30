@@ -1135,6 +1135,8 @@ export default function Home() {
           <a>Shipping & Delivery</a>
           <a>Returns & Exchange</a>
           <a>FAQs</a>
+          <a href="https://www.instagram.com/carnivalofclothes/" target="_blank" rel="noopener noreferrer">Instagram</a>
+          <a href="https://wa.me/919662143635" target="_blank" rel="noopener noreferrer">WhatsApp · +91 96621 43635</a>
         </div>
         <div>
           <b>Stay in the loop</b>

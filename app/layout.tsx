@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import GlobalStatusLoader from "./components/GlobalStatusLoader";
+import SocialContactLinks from "./components/SocialContactLinks";
 
 const publicSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || "https://www.carnivalofclothes.com").replace(/\/$/, "");
 
@@ -42,7 +43,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     "@context": "https://schema.org",
     "@graph": [
       { "@type": "WebSite", "@id": `${publicSiteUrl}/#website`, url: publicSiteUrl, name: "Carnival of Clothes", alternateName: "Carnival of Clothes by Nandini", inLanguage: "en-IN", potentialAction: { "@type": "SearchAction", target: `${publicSiteUrl}/shop?search={search_term_string}`, "query-input": "required name=search_term_string" } },
-      { "@type": ["ClothingStore", "OnlineStore"], "@id": `${publicSiteUrl}/#organization`, url: publicSiteUrl, name: "Carnival of Clothes", alternateName: "Carnival of Clothes by Nandini", description: "Ahmedabad-based women's clothing store for curated everyday and occasion fashion.", logo: `${publicSiteUrl}/favicon.svg`, image: `${publicSiteUrl}/collection.jpg`, address: { "@type": "PostalAddress", addressLocality: "Ahmedabad", addressRegion: "Gujarat", addressCountry: "IN" }, areaServed: [{ "@type": "City", name: "Ahmedabad" }, { "@type": "State", name: "Gujarat" }, { "@type": "Country", name: "India" }] },
+      { "@type": ["ClothingStore", "OnlineStore"], "@id": `${publicSiteUrl}/#organization`, url: publicSiteUrl, name: "Carnival of Clothes", alternateName: "Carnival of Clothes by Nandini", description: "Ahmedabad-based women's clothing store for curated everyday and occasion fashion.", logo: `${publicSiteUrl}/favicon.svg`, image: `${publicSiteUrl}/collection.jpg`, telephone: "+91 96621 43635", sameAs: ["https://www.instagram.com/carnivalofclothes/"], address: { "@type": "PostalAddress", addressLocality: "Ahmedabad", addressRegion: "Gujarat", addressCountry: "IN" }, areaServed: [{ "@type": "City", name: "Ahmedabad" }, { "@type": "State", name: "Gujarat" }, { "@type": "Country", name: "India" }] },
     ],
   } : null;
 
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="selection:bg-[#e8b9b2] selection:text-[#3a2926]">
         <GlobalStatusLoader />
         {children}
+        <SocialContactLinks />
       </body>
     </html>
   );

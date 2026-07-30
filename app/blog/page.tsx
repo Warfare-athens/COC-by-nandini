@@ -89,6 +89,7 @@ export default async function BlogPage({
       <footer className="blog-footer">
         <a href="/">Carnival of Clothes by Nandini</a>
         <span>Thoughtful fashion from Ahmedabad for every occasion.</span>
+        <span><a href="https://www.instagram.com/carnivalofclothes/" target="_blank" rel="noopener noreferrer">Instagram</a> · <a href="https://wa.me/919662143635" target="_blank" rel="noopener noreferrer">WhatsApp</a></span>
       </footer>
     </main>
   );

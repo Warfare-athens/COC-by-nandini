@@ -36,6 +36,8 @@ export default function AhmedabadPage() {
         url: siteUrl,
         logo: `${siteUrl}/favicon.svg`,
         image: `${siteUrl}/collection.jpg`,
+        telephone: "+91 96621 43635",
+        sameAs: ["https://www.instagram.com/carnivalofclothes/"],
         description: "Ahmedabad-based women's clothing store offering curated everyday and occasion fashion.",
         address: { "@type": "PostalAddress", addressLocality: "Ahmedabad", addressRegion: "Gujarat", addressCountry: "IN" },
         areaServed: [{ "@type": "City", name: "Ahmedabad" }, { "@type": "State", name: "Gujarat" }, { "@type": "Country", name: "India" }],
@@ -94,7 +96,7 @@ export default function AhmedabadPage() {
       </section>
 
       <section className={styles.faq}><span className={styles.sectionLabel}>LOCAL QUESTIONS</span><h2>Shopping Carnival of Clothes in Ahmedabad</h2>{faqs.map((item) => <details key={item.question}><summary>{item.question}</summary><p>{item.answer}</p></details>)}</section>
-      <footer className={styles.footer}><span>Carnival of Clothes by Nandini · Ahmedabad, Gujarat</span><a href="/shop">Shop women’s clothing →</a></footer>
+      <footer className={styles.footer}><span>Carnival of Clothes by Nandini · Ahmedabad, Gujarat</span><span><a href="https://www.instagram.com/carnivalofclothes/" target="_blank" rel="noopener noreferrer">Instagram</a> · <a href="https://wa.me/919662143635" target="_blank" rel="noopener noreferrer">WhatsApp · +91 96621 43635</a></span><a href="/shop">Shop women’s clothing →</a></footer>
     </main>
   );
 }

@@ -134,7 +134,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <span>KEEP READING</span><h2>More {post.category.toLowerCase()} guides</h2>
         <div>{related.map((item) => <a href={`/blog/${item.slug}`} key={item.slug}><img src={item.image} alt="" /><span>{item.category}</span><h3>{item.title}</h3></a>)}</div>
       </section>
-      <footer className="blog-footer"><a href="/ahmedabad">Carnival of Clothes by Nandini · Ahmedabad</a><a href="/blog">Explore all 100 guides →</a></footer>
+      <footer className="blog-footer"><a href="/ahmedabad">Carnival of Clothes by Nandini · Ahmedabad</a><span><a href="https://www.instagram.com/carnivalofclothes/" target="_blank" rel="noopener noreferrer">Instagram</a> · <a href="https://wa.me/919662143635" target="_blank" rel="noopener noreferrer">WhatsApp</a></span><a href="/blog">Explore all 100 guides →</a></footer>
     </main>
   );
 }
