@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Header from "../../components/Header";
 import { BLOG_POSTS, getBlogPost } from "@/lib/blogs";
+import { collectionForBlogCategory } from "@/lib/collections";
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || "https://www.carnivalofclothes.com").replace(/\/$/, "");
 
@@ -42,6 +43,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const post = getBlogPost(slug);
   if (!post) notFound();
   const related = BLOG_POSTS.filter((item) => item.category === post.category && item.slug !== post.slug).slice(0, 3);
+  const relatedCollection = collectionForBlogCategory(post.category);
   const articleUrl = `${siteUrl}/blog/${post.slug}`;
   const schemas = {
     "@context": "https://schema.org",
@@ -126,6 +128,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </details>
               ))}
             </section>
+            {relatedCollection && <section className="article-answer">
+              <span>SHOP THE EDIT</span>
+              <h2>{relatedCollection.title}</h2>
+              <p>{relatedCollection.intro}</p>
+              <a href={`/collections/${relatedCollection.slug}`}>Explore {relatedCollection.name.toLowerCase()} at Carnival of Clothes →</a>
+            </section>}
           </div>
         </div>
       </article>

@@ -35,7 +35,11 @@ export const metadata: Metadata = {
     description: "Ahmedabad-based curated women's fashion for everyday elegance and every special moment.",
     ...(publicSiteUrl ? { images: ["/hero.jpg"] } : {}),
   },
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  icons: {
+    icon: [{ url: "/favicon-logo.png", type: "image/png", sizes: "512x512" }],
+    shortcut: "/favicon-logo.png",
+    apple: [{ url: "/favicon-logo.png", sizes: "512x512", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

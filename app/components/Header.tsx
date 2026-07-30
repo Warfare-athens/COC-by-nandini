@@ -27,13 +27,13 @@ const MenuChevron = ({ className = "" }: { className?: string }) => (
 );
 
 const drawerCategories = [
-  { name: "Dresses", img: "/party-wear-red-dress.png", href: "/shop?category=Dresses" },
-  { name: "Top Wear", img: "/top-wear-pink-floral.png", href: "/shop?category=Top%20Wear", subcategories: ["Shirts", "T-shirts", "Crop Tops", "Tank Tops", "Bodysuits"] },
-  { name: "Bottom Wear", img: "/bottom-wear-category.png", href: "/shop?category=Bottom%20Wear", subcategories: ["Jeans", "Trousers", "Cargo Pants", "Palazzo Pants", "Skirts", "Shorts"] },
-  { name: "Indian", img: "/indian-suits.png", href: "/shop?category=Indian", subcategories: ["Kurtis", "Kurta Sets", "Sarees", "Lehenga Sets", "Anarkali Suits", "Dupattas"] },
-  { name: "Korean", img: "/korean-suit-style.png", href: "/shop?category=Korean", subcategories: ["Korean Tops", "Korean Dresses", "Korean Co-ords", "Oversized Shirts", "Pleated Skirts"] },
-  { name: "Co-ord Sets", img: "/combos-co-ords.png", href: "/shop?category=Co-ord%20Sets" },
-  { name: "Accessories", img: "/accessories-gold-jewelry.jpg", href: "/shop?category=Accessories", subcategories: ["Handbags", "Jewellery", "Sunglasses", "Belts", "Hair Accessories", "Scarves"] },
+  { name: "Dresses", img: "/party-wear-red-dress.png", href: "/collections/dresses" },
+  { name: "Top Wear", img: "/top-wear-pink-floral.png", href: "/collections/top-wear", subcategories: ["Shirts", "T-shirts", "Crop Tops", "Tank Tops", "Bodysuits"] },
+  { name: "Bottom Wear", img: "/bottom-wear-category.png", href: "/collections/bottom-wear", subcategories: ["Jeans", "Trousers", "Cargo Pants", "Palazzo Pants", "Skirts", "Shorts"] },
+  { name: "Indian", img: "/indian-suits.png", href: "/collections/indian-wear", subcategories: ["Kurtis", "Kurta Sets", "Sarees", "Lehenga Sets", "Anarkali Suits", "Dupattas"] },
+  { name: "Korean", img: "/korean-suit-style.png", href: "/collections/korean-clothing", subcategories: ["Korean Tops", "Korean Dresses", "Korean Co-ords", "Oversized Shirts", "Pleated Skirts"] },
+  { name: "Co-ord Sets", img: "/combos-co-ords.png", href: "/collections/co-ord-sets" },
+  { name: "Accessories", img: "/accessories-gold-jewelry.jpg", href: "/collections/accessories", subcategories: ["Handbags", "Jewellery", "Sunglasses", "Belts", "Hair Accessories", "Scarves"] },
   { name: "COMBO", img: "/combos-co-ords.png", href: "/shop?category=Co-ord%20Sets", uppercase: true },
   { name: "OFFERS", img: "/special-offers-deals.jpg", href: "/shop?category=Trending", featured: true, uppercase: true },
 ];
@@ -347,7 +347,7 @@ export default function Header({ activeTab }: HeaderProps) {
                               {category.subcategories.map((subcategory) => (
                                 <a
                                   className="!flex !w-full !items-center !justify-between !border-0 !px-3 !py-1.5 !text-[11px] !normal-case !tracking-normal text-[#66534d] hover:!bg-[#f8ebe5] hover:!text-[#bb7068]"
-                                  href={`${category.href}&subcategory=${encodeURIComponent(subcategory)}`}
+                                  href={`/shop?category=${encodeURIComponent(category.name)}&subcategory=${encodeURIComponent(subcategory)}`}
                                   onClick={() => setMenuOpen(false)}
                                   key={subcategory}
                                 >

@@ -1,0 +1,27 @@
+.page { background: #fffaf6; color: #493530; min-height: 100vh; }
+.hero { display: grid; grid-template-columns: 1.05fr .95fr; min-height: 580px; border-bottom: 1px solid #edd6cb; }
+.copy { display: flex; flex-direction: column; justify-content: center; padding: 80px clamp(28px,7vw,110px); }
+.eyebrow { color: #b86860; font-size: 11px; font-weight: 600; letter-spacing: .18em; }
+.copy h1 { max-width: 720px; margin: 18px 0; font-family: "Instrument Serif",serif; font-size: clamp(52px,6vw,88px); font-weight: 400; line-height: .96; }
+.copy p { max-width: 590px; color: #75605a; font-size: 16px; line-height: 1.8; }
+.copy a { align-self: flex-start; margin-top: 28px; border: 1px solid #bd756b; border-radius: 999px; padding: 13px 22px; color: #8c4b45; font-size: 11px; font-weight: 600; letter-spacing: .1em; }
+.heroImage { min-height: 520px; width: 100%; height: 100%; object-fit: cover; }
+.products, .links { padding: 72px clamp(24px,6vw,96px); }
+.heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 32px; }
+.heading h2, .links h2 { margin: 8px 0 0; font-family: "Instrument Serif",serif; font-size: clamp(38px,4vw,58px); font-weight: 400; }
+.grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 24px; }
+.card img { width: 100%; aspect-ratio: 3/4; border-radius: 18px; object-fit: cover; }
+.card h3 { margin: 14px 0 4px; font-family: "Instrument Serif",serif; font-size: 25px; font-weight: 400; }
+.card p { color: #9d625b; font-size: 13px; }
+.empty { border: 1px solid #ead2c7; border-radius: 18px; padding: 28px; color: #79635d; }
+.links { background: #f7eae3; }
+.linkGrid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.linkGrid a { border: 1px solid #dfb8aa; border-radius: 999px; background: #fffaf6; padding: 11px 17px; font-size: 12px; }
+@media (max-width: 800px) {
+  .hero { grid-template-columns: 1fr; min-height: 0; }
+  .copy { padding: 52px 22px 36px; }
+  .heroImage { min-height: 0; aspect-ratio: 4/5; }
+  .products, .links { padding: 52px 18px; }
+  .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+  .card h3 { font-size: 20px; }
+}

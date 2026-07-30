@@ -1125,16 +1125,19 @@ export default function Home() {
           <b>Quick links</b>
           <a href="#shop">Collections</a>
           <a href="#shop">New arrivals</a>
-          <a href="#story">About us</a>
+          <a href="/about">About us</a>
+          <a href="/contact">Contact us</a>
           <a href="/blog">Fashion journal</a>
           <a href="/ahmedabad">Ahmedabad store</a>
           <a href="/admin" target="_blank" rel="noopener noreferrer">Admin</a>
         </div>
         <div>
           <b>Customer care</b>
-          <a>Shipping & Delivery</a>
-          <a>Returns & Exchange</a>
-          <a>FAQs</a>
+          <a href="/shipping-delivery">Shipping & Delivery</a>
+          <a href="/returns-exchanges">Returns & Exchanges</a>
+          <a href="/size-guide">Size Guide</a>
+          <a href="/privacy-policy">Privacy Policy</a>
+          <a href="/terms-conditions">Terms & Conditions</a>
           <a href="https://www.instagram.com/carnivalofclothes/" target="_blank" rel="noopener noreferrer">Instagram</a>
           <a href="https://wa.me/919662143635" target="_blank" rel="noopener noreferrer">WhatsApp · +91 96621 43635</a>
         </div>
@@ -1147,7 +1150,7 @@ export default function Home() {
           </div>
         </div>
         <div className="copyright">
-          © 2024 Carnival of Clothes by Nandini. All rights reserved.
+          © 2026 Carnival of Clothes by Nandini. All rights reserved.
         </div>
       </footer>
 
