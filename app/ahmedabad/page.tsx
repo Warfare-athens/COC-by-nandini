@@ -34,7 +34,7 @@ export default function AhmedabadPage() {
         name: "Carnival of Clothes by Nandini",
         alternateName: "Carnival of Clothes",
         url: siteUrl,
-        logo: `${siteUrl}/favicon.svg`,
+        logo: { "@type": "ImageObject", url: `${siteUrl}/favicon-logo.png`, width: 512, height: 512 },
         image: `${siteUrl}/collection.jpg`,
         telephone: "+91 96621 43635",
         sameAs: ["https://www.instagram.com/carnivalofclothes/"],

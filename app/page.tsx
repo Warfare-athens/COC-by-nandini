@@ -763,7 +763,7 @@ export default function Home() {
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <span className="eyebrow">THE NEW SEASON EDIT</span>
+          <span className="eyebrow">CARNIVAL OF CLOTHES · AHMEDABAD</span>
           <h1
             className="hero-shimmer"
             aria-label="Celebrate your style Everyday"
@@ -775,8 +775,8 @@ export default function Home() {
             </span>
           </h1>
           <p>
-            Discover curated collections that celebrate your style and every
-            special moment.
+            Carnival of Clothes by Nandini is an Ahmedabad women&apos;s fashion
+            store for curated everyday styles and special-occasion outfits.
           </p>
           <a href="#shop" className="primary">
             Explore Collection <span>→</span>
@@ -1082,6 +1082,34 @@ export default function Home() {
         <p className="mx-auto max-w-2xl text-sm leading-7 text-[#66534d]">Discover curated dresses, co-ord sets, Indian wear, Korean-inspired styles and occasion clothing from Carnival of Clothes by Nandini.</p>
         <a className="mt-4 inline-block text-[10px] font-semibold uppercase tracking-[.14em] text-[#bb7068]" href="/ahmedabad">Explore our Ahmedabad store →</a>
       </section>
+
+      <section className="border-b border-[#e8cdbc] bg-[#fffaf6] px-[10%] py-12" aria-labelledby="about-carnival-of-clothes">
+        <div className="mx-auto max-w-5xl">
+          <span className="text-[10px] font-semibold tracking-[.2em] text-[#bb7068]">THE OFFICIAL CARNIVAL OF CLOTHES STORE</span>
+          <h2 id="about-carnival-of-clothes" className="my-3 font-['Instrument_Serif'] text-3xl font-normal text-[#733b36] md:text-4xl">About Carnival of Clothes</h2>
+          <div className="grid gap-6 text-sm leading-7 text-[#66534d] md:grid-cols-3">
+            <div><h3 className="mb-1 font-semibold text-[#3a2926]">What is Carnival of Clothes?</h3><p>Carnival of Clothes by Nandini is a women&apos;s clothing brand and online boutique based in Ahmedabad, Gujarat.</p></div>
+            <div><h3 className="mb-1 font-semibold text-[#3a2926]">What can you shop here?</h3><p>Shop curated dresses, co-ord sets, Indian wear, Korean-inspired clothing, party wear and accessories.</p></div>
+            <div><h3 className="mb-1 font-semibold text-[#3a2926]">Is this the official website?</h3><p>Yes. carnivalofclothes.com is the official online store and fashion journal of Carnival of Clothes by Nandini.</p></div>
+          </div>
+          <a className="mt-5 inline-block text-[10px] font-semibold uppercase tracking-[.14em] text-[#bb7068]" href="/about">Read our story →</a>
+        </div>
+      </section>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              { "@type": "Question", name: "What is Carnival of Clothes?", acceptedAnswer: { "@type": "Answer", text: "Carnival of Clothes by Nandini is a women's clothing brand and online boutique based in Ahmedabad, Gujarat." } },
+              { "@type": "Question", name: "What does Carnival of Clothes sell?", acceptedAnswer: { "@type": "Answer", text: "Carnival of Clothes sells curated dresses, co-ord sets, Indian wear, Korean-inspired clothing, party wear and accessories." } },
+              { "@type": "Question", name: "What is the official Carnival of Clothes website?", acceptedAnswer: { "@type": "Answer", text: "carnivalofclothes.com is the official online store and fashion journal of Carnival of Clothes by Nandini." } },
+            ],
+          }),
+        }}
+      />
 
       <section className="perks">
         <div>

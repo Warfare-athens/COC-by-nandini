@@ -58,7 +58,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         dateModified: post.updatedAt,
         mainEntityOfPage: articleUrl,
         author: { "@type": "Organization", name: "Carnival of Clothes by Nandini", url: siteUrl },
-        publisher: { "@type": "Organization", name: "Carnival of Clothes", url: siteUrl, logo: { "@type": "ImageObject", url: `${siteUrl}/favicon.svg` } },
+        publisher: { "@type": "Organization", name: "Carnival of Clothes", url: siteUrl, logo: { "@type": "ImageObject", url: `${siteUrl}/favicon-logo.png`, width: 512, height: 512 } },
         articleSection: post.category,
         keywords: post.keywords.join(", "),
         speakable: { "@type": "SpeakableSpecification", cssSelector: [".article-answer", ".article-content h2"] },
