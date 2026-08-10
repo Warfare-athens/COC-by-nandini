@@ -3,12 +3,12 @@ import Header from "../components/Header";
 import { BLOG_CATEGORIES, BLOG_POSTS } from "@/lib/blogs";
 
 export const metadata: Metadata = {
-  title: "Women's Fashion Blog & Style Guides",
-  description: "Explore 100 practical women's fashion guides covering dresses, co-ord sets, Indian wear, Korean style, party outfits, accessories and smart online shopping.",
+  title: "Women's Fashion Blog India: 100 Style Guides",
+  description: "Explore 100 search-focused women's fashion guides for India covering dresses, co-ord sets, Indian wear, workwear, parties, fit and Ahmedabad shopping.",
   alternates: { canonical: "/blog" },
   openGraph: {
-    title: "Women's Fashion Blog & Style Guides | Carnival of Clothes",
-    description: "Helpful, answer-first style guides for building outfits you love and a wardrobe you actually wear.",
+    title: "Women's Fashion Blog India: 100 Style Guides | Carnival of Clothes",
+    description: "Answer-first guides for Indian women covering outfits, sizing, dresses, co-ords, occasions and shopping in Ahmedabad.",
     url: "/blog",
     images: [{ url: "/collection.jpg", alt: "Carnival of Clothes fashion guides" }],
   },
@@ -27,7 +27,7 @@ export default async function BlogPage({
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: "Carnival of Clothes Fashion Blog",
-    description: "Practical women's fashion, styling and shopping guides.",
+    description: "Search-focused women's fashion, styling, fit and Ahmedabad shopping guides from Carnival of Clothes by Nandini.",
     mainEntity: {
       "@type": "ItemList",
       numberOfItems: posts.length,
@@ -47,7 +47,7 @@ export default async function BlogPage({
       <header className="blog-hero">
         <span>THE CARNIVAL JOURNAL</span>
         <h1>Style advice for <i>real wardrobes</i></h1>
-        <p>100 practical guides to help you choose, style, rewear and care for clothes with confidence.</p>
+        <p>100 answer-first guides for Indian women covering dresses, co-ords, occasion outfits, workwear, fit and shopping in Ahmedabad.</p>
       </header>
 
       <nav className="blog-filters" aria-label="Blog categories">

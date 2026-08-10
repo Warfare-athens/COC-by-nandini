@@ -33,6 +33,9 @@ export const collectionForBlogCategory = (category: string) => {
     "Party Wear": "party-wear",
     "Top Wear": "top-wear",
     "Bottom Wear": "bottom-wear",
+    Workwear: "co-ord-sets",
+    "Fit & Sizing": "dresses",
+    "Ahmedabad Fashion": "dresses",
     Accessories: "accessories",
   };
   return collectionBySlug(slugByCategory[category] || "dresses");

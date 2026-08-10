@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Header from "../../components/Header";
-import { BLOG_POSTS, getBlogPost } from "@/lib/blogs";
+import { BLOG_POSTS, BLOG_REDIRECTS, getBlogPost } from "@/lib/blogs";
 import { collectionForBlogCategory } from "@/lib/collections";
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || "https://www.carnivalofclothes.com").replace(/\/$/, "");
 
-export const dynamicParams = false;
+export const dynamicParams = true;
+
+const formatBlogDate = (value: string) =>
+  new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${value}T00:00:00Z`));
 
 export function generateStaticParams() {
   return BLOG_POSTS.map((post) => ({ slug: post.slug }));
@@ -41,7 +44,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = getBlogPost(slug);
-  if (!post) notFound();
+  if (!post) {
+    const replacement = BLOG_REDIRECTS.get(slug);
+    if (replacement && replacement !== `/blog/${slug}`) permanentRedirect(replacement);
+    notFound();
+  }
   const related = BLOG_POSTS.filter((item) => item.category === post.category && item.slug !== post.slug).slice(0, 3);
   const relatedCollection = collectionForBlogCategory(post.category);
   const articleUrl = `${siteUrl}/blog/${post.slug}`;
@@ -95,7 +102,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <span>{post.category}</span>
             <h1>{post.title}</h1>
             <p>{post.excerpt}</p>
-            <div><time dateTime={post.updatedAt}>Updated July 21, 2026</time><span>·</span><span>{post.readTime}</span></div>
+            <div><time dateTime={post.updatedAt}>Updated {formatBlogDate(post.updatedAt)}</time><span>·</span><span>{post.readTime}</span></div>
           </div>
           <div className="article-hero-image"><img src={post.image} alt={post.imageAlt} /></div>
         </header>
