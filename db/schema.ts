@@ -171,8 +171,14 @@ export const carts = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     anonymousToken: text("anonymous_token").notNull(),
+    email: text("email"),
+    phone: text("phone"),
+    status: text("status").default("active").notNull(),
     currency: text("currency").default("INR").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
     ...timestamps,
   },
   (table) => [uniqueIndex("carts_token_idx").on(table.anonymousToken)],
@@ -394,4 +400,134 @@ export const webhookEvents = pgTable(
       table.externalId,
     ),
   ],
+);
+
+export const contentEntries = pgTable(
+  "content_entries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    type: text("type").default("page").notNull(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull(),
+    status: text("status").default("draft").notNull(),
+    summary: text("summary"),
+    body: text("body"),
+    imageUrl: text("image_url"),
+    seoTitle: text("seo_title"),
+    seoDescription: text("seo_description"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("content_entries_slug_idx").on(table.slug),
+    index("content_entries_status_idx").on(table.status),
+  ],
+);
+
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    url: text("url").notNull(),
+    publicId: text("public_id"),
+    filename: text("filename"),
+    altText: text("alt_text"),
+    folder: text("folder").default("general").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    bytes: integer("bytes"),
+    mimeType: text("mime_type"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("media_assets_url_idx").on(table.url),
+    index("media_assets_folder_idx").on(table.folder),
+  ],
+);
+
+export const adminTemplates = pgTable(
+  "admin_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    type: text("type").default("content").notNull(),
+    subject: text("subject"),
+    body: text("body").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    ...timestamps,
+  },
+  (table) => [index("admin_templates_type_idx").on(table.type)],
+);
+
+export const partnerships = pgTable(
+  "partnerships",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    company: text("company"),
+    email: text("email"),
+    phone: text("phone"),
+    type: text("type").default("creator").notNull(),
+    status: text("status").default("lead").notNull(),
+    valueInr: integer("value_inr").default(0).notNull(),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (table) => [index("partnerships_status_idx").on(table.status)],
+);
+
+export const stockRequests = pgTable(
+  "stock_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    productId: uuid("product_id").references(() => products.id, {
+      onDelete: "set null",
+    }),
+    variantId: uuid("variant_id").references(() => productVariants.id, {
+      onDelete: "set null",
+    }),
+    customerName: text("customer_name"),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    requestedSize: text("requested_size"),
+    status: text("status").default("requested").notNull(),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index("stock_requests_status_idx").on(table.status),
+    index("stock_requests_product_idx").on(table.productId),
+  ],
+);
+
+export const customerFeedback = pgTable(
+  "customer_feedback",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name"),
+    email: text("email"),
+    type: text("type").default("general").notNull(),
+    rating: integer("rating"),
+    message: text("message").notNull(),
+    status: text("status").default("new").notNull(),
+    adminNote: text("admin_note"),
+    ...timestamps,
+  },
+  (table) => [index("customer_feedback_status_idx").on(table.status)],
+);
+
+export const newsletterSubscribers = pgTable(
+  "newsletter_subscribers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").notNull(),
+    status: text("status").default("subscribed").notNull(),
+    source: text("source").default("website").notNull(),
+    subscribedAt: timestamp("subscribed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("newsletter_subscribers_email_idx").on(table.email)],
 );

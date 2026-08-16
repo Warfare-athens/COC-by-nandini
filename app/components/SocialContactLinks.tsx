@@ -1,9 +1,14 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import styles from "./SocialContactLinks.module.css";
 
 export const instagramUrl = "https://www.instagram.com/carnivalofclothes/";
 export const whatsappUrl = "https://wa.me/919662143635";
 
 export default function SocialContactLinks() {
+  const pathname = usePathname();
+  if (pathname.startsWith("/admin")) return null;
   return (
     <aside className={styles.floating} aria-label="Contact Carnival of Clothes">
       <a href={instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Follow Carnival of Clothes on Instagram" title="Instagram">

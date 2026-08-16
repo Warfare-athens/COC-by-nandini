@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Header from "@/app/components/Header";
 import { addToCart } from "@/app/cart-helper";
+import { showGlobalStatus } from "@/app/global-status";
+import { StockRequestForm } from "@/app/components/EngagementForms";
 
 type Variant = {
   id: string;
@@ -29,6 +31,7 @@ type Review = {
   created_at: string;
 };
 type Product = {
+  id: string;
   name: string;
   short_description: string | null;
   description: string | null;
@@ -57,10 +60,13 @@ export default function DynamicProductClient({
   const available = variants.filter(
     (variant) => variant.inventory_quantity > 0,
   );
+  const unavailableSizes = variants.filter(variant=>variant.inventory_quantity<=0).map(variant=>variant.size||variant.title);
   const [size, setSize] = useState(available[0]?.size || "");
   const [added, setAdded] = useState(false);
   const [open, setOpen] = useState("Product Details");
   const [faq, setFaq] = useState("");
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewBusy, setReviewBusy] = useState(false);
   const images = [...product.product_images].sort(
     (a, b) => a.sort_order - b.sort_order,
   );
@@ -135,6 +141,7 @@ export default function DynamicProductClient({
   const add = () => {
     if (!canBuy) return;
     addToCart({
+      productId: product.id,
       name: product.name,
       price: `₹${Number(product.price_inr).toLocaleString("en-IN")}`,
       img: mainImage,
@@ -228,6 +235,7 @@ export default function DynamicProductClient({
               );
             })}
           </div>
+          <StockRequestForm productId={product.id} sizes={unavailableSizes}/>
           {!available.length && (
             <p className="fit-note">
               Stock is currently unavailable for every size.
@@ -282,7 +290,9 @@ export default function DynamicProductClient({
               Reviews <i>({reviews.length})</i>
             </h2>
           </div>
+          <button className="rounded-full border border-[#bb7068] px-4 py-2 text-[10px] font-semibold uppercase tracking-[.1em] text-[#bb7068]" type="button" onClick={()=>setReviewOpen(current=>!current)}>Write a review</button>
         </div>
+        {reviewOpen && <form className="mx-auto mb-8 grid max-w-2xl gap-3 rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:grid-cols-2" onSubmit={async event=>{event.preventDefault();setReviewBusy(true);const form=event.currentTarget;const data=Object.fromEntries(new FormData(form));const response=await fetch("/api/reviews",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...data,productId:product.id})});const payload=await response.json();setReviewBusy(false);if(!response.ok)return showGlobalStatus(payload.error||"Unable to submit review","error");form.reset();setReviewOpen(false);showGlobalStatus("Review submitted for approval","success")}}><input className="rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm" name="customerName" placeholder="Your name" required/><input className="rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm" name="email" type="email" placeholder="Order email" required/><select className="rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm" name="rating" required>{[5,4,3,2,1].map(value=><option value={value} key={value}>{value} stars</option>)}</select><input className="rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm" name="title" placeholder="Review title"/><textarea className="min-h-28 rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm sm:col-span-2" name="body" placeholder="Your review" minLength={10} required/><button className="rounded-full bg-[#bb7068] px-5 py-3 text-xs font-semibold uppercase tracking-[.1em] text-white sm:col-span-2" disabled={reviewBusy}>{reviewBusy?"Submitting…":"Submit review"}</button></form>}
         {reviews.length ? (
           <>
             <div className="review-summary">

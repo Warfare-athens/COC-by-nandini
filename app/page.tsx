@@ -9,8 +9,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { showGlobalStatus } from "./global-status";
 import { BLOG_POSTS } from "@/lib/blogs";
 import journalStyles from "./components/HomeJournal.module.css";
+import { NewsletterForm } from "./components/EngagementForms";
 
 type HomeProduct = {
+  id?: string;
   name: string;
   type: string;
   categories: string[];
@@ -98,6 +100,7 @@ export default function Home() {
               (product.is_featured || product.is_best_seller) && "OFFERS",
             ].filter(Boolean) as string[];
             return {
+              id: product.id ? String(product.id) : undefined,
               name: String(product.name),
               type: String(
                 product.short_description ||
@@ -742,6 +745,7 @@ export default function Home() {
 
   const addToBag = (product: HomeProduct) => {
     addToCart({
+      productId: product.id,
       name: product.name,
       price: product.price,
       img: product.img,
@@ -1172,10 +1176,7 @@ export default function Home() {
         <div>
           <b>Stay in the loop</b>
           <p>Be the first to know about new arrivals & offers.</p>
-          <div className="email">
-            <input placeholder="Enter your email" />
-            <button>→</button>
-          </div>
+          <NewsletterForm />
         </div>
         <div className="copyright">
           © 2026 Carnival of Clothes by Nandini. All rights reserved.

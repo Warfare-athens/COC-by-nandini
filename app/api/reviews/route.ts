@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { commerceConfigured, getSupabaseAdmin } from "@/db";
+const schema=z.object({productId:z.string().uuid(),customerName:z.string().min(2).max(100),email:z.string().email(),rating:z.coerce.number().int().min(1).max(5),title:z.string().max(150).optional(),body:z.string().min(10).max(2000)});
+export async function POST(request:Request){if(!commerceConfigured())return NextResponse.json({error:"Reviews unavailable"},{status:503});try{const input=schema.parse(await request.json());const supabase=getSupabaseAdmin();const{count}=await supabase.from("orders").select("id",{count:"exact",head:true}).eq("email",input.email.toLowerCase());const{error}=await supabase.from("product_reviews").insert({product_id:input.productId,customer_name:input.customerName,email:input.email.toLowerCase(),rating:input.rating,title:input.title||null,body:input.body,is_verified:Number(count||0)>0,status:"pending"});if(error)throw error;return NextResponse.json({ok:true},{status:201})}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to submit review"},{status:400})}}

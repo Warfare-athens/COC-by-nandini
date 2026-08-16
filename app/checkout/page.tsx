@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { CartItem, getCartItems, saveCartItems } from "../cart-helper";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { CartItem, clearCartAfterCheckout, getCartItems, getCartToken } from "../cart-helper";
 import { Signature } from "../components/Signature";
+import { trackCommerceEvent } from "../analytics-helper";
 
 const inputClass = "w-full rounded-lg border border-[#e8cdbc] bg-[#fffaf7] px-4 py-3 text-sm text-[#3a2926] outline-none transition placeholder:text-[#aa9188] focus:border-[#bb7068] focus:ring-2 focus:ring-[#bb7068]/15";
 
@@ -13,31 +14,104 @@ export default function CheckoutPage() {
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(2999);
+  const [shippingCharge, setShippingCharge] = useState(149);
+  const [couponCode, setCouponCode] = useState("");
+  const [discount, setDiscount] = useState(0);
+  const leadTimerRef = useRef<number | null>(null);
+  const checkoutTrackedRef = useRef(false);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => setItems(getCartItems()), 0);
+    fetch("/api/storefront/settings").then(response=>response.json()).then(data=>{setFreeShippingThreshold(Number(data.freeShippingThreshold||2999));setShippingCharge(Number(data.shippingCharge||149))}).catch(()=>undefined);
     return () => window.clearTimeout(initialLoad);
   }, []);
 
   const parsePrice = (price: string) => Number.parseInt(price.replace(/[^\d]/g, ""), 10) || 0;
   const subtotal = items.reduce((sum, item) => sum + parsePrice(item.price) * item.quantity, 0);
-  const shipping = subtotal >= 2999 || subtotal === 0 ? 0 : 149;
-  const total = subtotal + shipping;
+  const shipping = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : shippingCharge;
+  const total = Math.max(subtotal - discount + shipping, 0);
+
+  useEffect(() => {
+    if (!subtotal || checkoutTrackedRef.current) return;
+    checkoutTrackedRef.current = true;
+    trackCommerceEvent("checkout_started", { itemCount: items.reduce((sum, item) => sum + item.quantity, 0), subtotalInr: subtotal });
+  }, [items, subtotal]);
+
+  useEffect(() => () => {
+    if (leadTimerRef.current) window.clearTimeout(leadTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = window.setTimeout(async () => {
+      const code = localStorage.getItem("coc-applied-coupon") || "";
+      setCouponCode(code);
+      if (!code || !subtotal) {
+        setDiscount(0);
+        return;
+      }
+      try {
+        const response = await fetch("/api/coupons/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, subtotal }),
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (response.ok) setDiscount(Number(data.discount || 0));
+        else {
+          setDiscount(0);
+          setCouponCode("");
+          localStorage.removeItem("coc-applied-coupon");
+        }
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setDiscount(0);
+      }
+    }, 0);
+    return () => {
+      window.clearTimeout(refresh);
+      controller.abort();
+    };
+  }, [subtotal]);
+
+  const captureCheckoutLead = (event: FormEvent<HTMLFormElement>) => {
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const phone = String(form.get("phone") || "").trim();
+    if (leadTimerRef.current) window.clearTimeout(leadTimerRef.current);
+    if (!/^\S+@\S+\.\S+$/.test(email) && phone.replace(/\D/g, "").length < 8) return;
+    leadTimerRef.current = window.setTimeout(() => {
+      fetch("/api/cart/lead", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ anonymousToken: getCartToken(), email: /^\S+@\S+\.\S+$/.test(email) ? email : "", phone }) }).catch(() => undefined);
+    }, 700);
+  };
 
   const placeOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!items.length) return;
+    if (leadTimerRef.current) window.clearTimeout(leadTimerRef.current);
     setSubmitting(true); setCheckoutError("");
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-      customer: { fullName: form.get("fullName"), email: form.get("email"), phone: form.get("phone") },
-      address: { line1: form.get("line1"), line2: form.get("line2"), city: form.get("city"), state: form.get("state"), postalCode: form.get("postalCode"), country: "India" },
-      items: items.map((item) => ({ name: item.name, size: item.size, quantity: item.quantity })), paymentMethod: payment,
-    }) });
-    const data = await response.json(); setSubmitting(false);
-    if (!response.ok) return setCheckoutError(data.error || "Unable to place your order.");
-    saveCartItems([]);
-    setPlacedOrderNumber(data.orderNumber); setPlaced(true);
+    trackCommerceEvent("checkout_submitted", { itemCount: items.reduce((sum, item) => sum + item.quantity, 0), subtotalInr: subtotal, totalInr: total, paymentMethod: payment, hasCoupon: Boolean(couponCode) });
+    try {
+      const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        customer: { fullName: form.get("fullName"), email: form.get("email"), phone: form.get("phone") },
+        address: { line1: form.get("line1"), line2: form.get("line2"), city: form.get("city"), state: form.get("state"), postalCode: form.get("postalCode"), country: "India" },
+        items: items.map((item) => ({ name: item.name, size: item.size, quantity: item.quantity })), paymentMethod: payment, cartToken: getCartToken(), couponCode: couponCode || undefined,
+      }) });
+      const data = await response.json();
+      if (!response.ok) {
+        trackCommerceEvent("checkout_failed", { stage: "order", status: response.status });
+        return setCheckoutError(data.error || "Unable to place your order.");
+      }
+      clearCartAfterCheckout();
+      setPlacedOrderNumber(data.orderNumber); setPlaced(true);
+    } catch {
+      trackCommerceEvent("checkout_failed", { stage: "network", status: 0 });
+      setCheckoutError("The connection was interrupted. Your cart is safe—please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (placed) {
@@ -65,7 +139,7 @@ export default function CheckoutPage() {
         </div>
       </header>
 
-      <form onSubmit={placeOrder} className="mx-auto grid max-w-6xl gap-8 px-4 py-7 lg:grid-cols-[1fr_420px] lg:gap-12 lg:px-8 lg:py-10">
+      <form onSubmit={placeOrder} onInput={captureCheckoutLead} className="mx-auto grid max-w-6xl gap-8 px-4 py-7 lg:grid-cols-[1fr_420px] lg:gap-12 lg:px-8 lg:py-10">
         <div className="space-y-6">
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#bb7068]">Secure checkout</span>
@@ -122,11 +196,12 @@ export default function CheckoutPage() {
               </div>
               <div className="mt-6 space-y-3 border-t border-[#e8cdbc] pt-5 text-xs">
                 <div className="flex justify-between"><span className="text-[#806f69]">Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
+                {discount > 0 && <div className="flex justify-between text-[#55785d]"><span>{couponCode}</span><span>−₹{discount.toLocaleString()}</span></div>}
                 <div className="flex justify-between"><span className="text-[#806f69]">Shipping</span><span>{shipping ? `₹${shipping}` : "Free"}</span></div>
                 <div className="flex justify-between border-t border-[#e8cdbc] pt-4 text-base font-semibold"><span>Total</span><span>₹{total.toLocaleString()}</span></div>
               </div>
               <button type="submit" className="mt-6 w-full rounded-lg bg-[#bb7068] py-4 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(187,112,104,0.24)] transition hover:bg-[#a95f5a]">Place order · ₹{total.toLocaleString()}</button>
-              <p className="mt-4 text-center text-[9px] leading-4 text-[#8c746b]">Secure checkout · Easy returns · Payment information is encrypted</p>
+              <p className="mt-4 text-center text-[9px] leading-4 text-[#8c746b]">Secure checkout · Easy returns · Order support on WhatsApp</p>
               {checkoutError && <p className="mt-4 rounded-md border border-[#d99a8f] bg-[#fff0eb] px-3 py-2 text-xs text-[#a5534d]" role="alert">{checkoutError}</p>}
             </>
           ) : (

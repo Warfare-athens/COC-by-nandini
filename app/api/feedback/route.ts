@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { commerceConfigured, getSupabaseAdmin } from "@/db";
+const schema=z.object({name:z.string().max(100).optional(),email:z.union([z.string().email(),z.literal("")]).optional(),type:z.string().max(40).default("general"),rating:z.union([z.coerce.number().int().min(1).max(5),z.literal("")]).optional(),message:z.string().min(5).max(2000)});
+export async function POST(request:Request){if(!commerceConfigured())return NextResponse.json({error:"Feedback unavailable"},{status:503});try{const input=schema.parse(await request.json());const{error}=await getSupabaseAdmin().from("customer_feedback").insert({name:input.name||null,email:input.email||null,type:input.type,rating:input.rating===""?null:input.rating,message:input.message,status:"new"});if(error)throw error;return NextResponse.json({ok:true},{status:201})}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to send feedback"},{status:400})}}

@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { commerceConfigured, getSupabaseAdmin } from "@/db";
+const schema=z.object({productId:z.string().uuid(),requestedSize:z.string().min(1).max(50),email:z.string().email(),customerName:z.string().max(100).optional(),phone:z.string().max(30).optional()});
+export async function POST(request:Request){if(!commerceConfigured())return NextResponse.json({error:"Stock requests unavailable"},{status:503});try{const input=schema.parse(await request.json());const supabase=getSupabaseAdmin();const{data:variant}=await supabase.from("product_variants").select("id").eq("product_id",input.productId).eq("size",input.requestedSize).maybeSingle();const{error}=await supabase.from("stock_requests").insert({product_id:input.productId,variant_id:variant?.id||null,requested_size:input.requestedSize,email:input.email.toLowerCase(),customer_name:input.customerName||null,phone:input.phone||null,status:"requested"});if(error)throw error;return NextResponse.json({ok:true},{status:201})}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to save request"},{status:400})}}

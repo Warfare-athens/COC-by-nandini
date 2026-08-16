@@ -49,11 +49,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   if (commerceConfigured()) {
-    const { data: products } = await getSupabaseAdmin()
+    const supabase = getSupabaseAdmin();
+    const [{ data: products }, { data: content }] = await Promise.all([supabase
       .from("products")
       .select("slug,updated_at")
       .eq("status", "active")
-      .order("updated_at", { ascending: false });
+      .order("updated_at", { ascending: false }), supabase.from("content_entries").select("slug,updated_at").eq("status", "published")]);
 
     for (const product of products || []) {
       entries.push({
@@ -63,6 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.85,
       });
     }
+    for (const item of content || []) entries.push({ url: `${baseUrl}/content/${item.slug}`, lastModified: item.updated_at ? new Date(item.updated_at) : generatedAt, changeFrequency: "monthly", priority: 0.6 });
   }
 
   return entries;

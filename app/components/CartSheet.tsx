@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CartItem, getCartItems, removeFromCart, updateQuantity } from "../cart-helper";
 import { showGlobalStatus } from "../global-status";
+import { trackCommerceEvent } from "../analytics-helper";
 
 interface CartSheetProps {
   open: boolean;
@@ -13,7 +14,9 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(24 * 60 * 60 - 1);
+  const wasOpen = useRef(false);
 
   useEffect(() => {
     const loadItems = () => setItems(getCartItems());
@@ -43,20 +46,39 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
   const shippingDifference = Math.max(2999 - subtotal, 0);
   const giftDifference = Math.max(2199 - subtotal, 0);
   const giftProgress = Math.min((subtotal / 2199) * 100, 100);
-  const discount = appliedCoupon === "COC100" && subtotal >= 999 ? 100 : 0;
+  const discount = appliedCoupon ? couponDiscount : 0;
   const estimatedTotal = Math.max(subtotal - discount, 0);
   const hours = String(Math.floor(secondsLeft / 3600)).padStart(2, "0");
   const minutes = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0");
   const seconds = String(secondsLeft % 60).padStart(2, "0");
 
-  const applyCoupon = () => {
-    const normalized = coupon.trim().toUpperCase();
-    if (normalized === "COC100" && subtotal >= 999) {
-      setAppliedCoupon(normalized);
-      showGlobalStatus("Coupon applied successfully", "success");
-    } else {
-      showGlobalStatus(normalized === "COC100" ? "Add more items to use this coupon" : "Coupon code is not valid", "error");
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      const currentItems = getCartItems();
+      trackCommerceEvent("cart_viewed", {
+        itemCount: currentItems.reduce((sum, item) => sum + item.quantity, 0),
+        subtotalInr: currentItems.reduce((sum, item) => sum + (Number.parseInt(item.price.replace(/[^\d]/g, ""), 10) || 0) * item.quantity, 0),
+      });
     }
+    wasOpen.current = open;
+  }, [open]);
+
+  const applyCoupon = async () => {
+    const normalized = coupon.trim().toUpperCase();
+    const response = await fetch("/api/coupons/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: normalized, subtotal }) });
+    const data = await response.json();
+    if (!response.ok) {
+      trackCommerceEvent("coupon_rejected", { code: normalized || "empty", subtotalInr: subtotal });
+      return showGlobalStatus(data.error || "Coupon code is not valid", "error");
+    }
+    setAppliedCoupon(data.code); setCouponDiscount(Number(data.discount || 0)); localStorage.setItem("coc-applied-coupon", data.code);
+    trackCommerceEvent("coupon_applied", { code: data.code, discountInr: Number(data.discount || 0), subtotalInr: subtotal });
+    showGlobalStatus("Coupon applied successfully", "success");
+  };
+
+  const startCheckout = () => {
+    trackCommerceEvent("checkout_started", { itemCount: items.reduce((sum, item) => sum + item.quantity, 0), subtotalInr: subtotal, discountInr: discount });
+    window.location.assign("/checkout");
   };
 
   return (
@@ -132,16 +154,7 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
                   </label>
                   <button className="rounded-md border border-[#bd716b] px-4 text-xs text-[#a95f5a] transition hover:bg-[#bd716b] hover:text-white" onClick={applyCoupon}>Apply</button>
                 </div>
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#ead8ce] pb-2">
-                    <div><b className="text-sm font-medium">COC100</b><p className="text-[9px] text-[#8c746b]">₹100 off above ₹999.</p></div>
-                    <button className="rounded border border-[#bd716b] px-3 py-1.5 text-[10px] text-[#a95f5a]" onClick={() => { setCoupon("COC100"); if (subtotal >= 999) setAppliedCoupon("COC100"); }}>{appliedCoupon ? "Applied" : "Use"}</button>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div><b className="text-sm font-medium">STYLE3</b><p className="text-[9px] text-[#8c746b]">Buy three and unlock a surprise.</p></div>
-                    <button className="rounded border border-[#bd716b] px-3 py-1.5 text-[10px] text-[#a95f5a]">View</button>
-                  </div>
-                </div>
+                {appliedCoupon && <div className="mt-3 flex items-center justify-between gap-3"><div><b className="text-sm font-medium">{appliedCoupon}</b><p className="text-[9px] text-[#8c746b]">You save ₹{discount.toLocaleString("en-IN")}.</p></div><button className="rounded border border-[#bd716b] px-3 py-1.5 text-[10px] text-[#a95f5a]" onClick={()=>{trackCommerceEvent("coupon_removed",{code:appliedCoupon,discountInr:discount});setAppliedCoupon("");setCouponDiscount(0);localStorage.removeItem("coc-applied-coupon")}}>Remove</button></div>}
               </section>
 
             </>
@@ -167,7 +180,7 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
               <button
                 className="mt-3 flex w-full items-center justify-center gap-4 rounded-lg border border-[#a95f5a] py-3.5 text-base font-medium text-white shadow-[0_10px_24px_rgba(169,95,90,0.24)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(169,95,90,0.3)]"
                 style={{ background: "linear-gradient(135deg, #c77972 0%, #ad625d 100%)", color: "#fff" }}
-                onClick={() => window.location.assign("/checkout")}
+                onClick={startCheckout}
               >
                 Checkout <span className="text-xl">→</span>
               </button>

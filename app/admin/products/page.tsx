@@ -23,7 +23,7 @@ export default async function AdminProductsPage() {
         <a className="admin-button" href="/admin/products/new">Add product</a>
       </div>
       <section className="admin-product-catalog">
-        {data.products.map((product: ProductRow) => {
+        {(data.products as ProductRow[]).map((product) => {
           const databaseCategory = (product.product_categories || [])
             .flatMap((item) => item.categories || [])[0]?.name;
           const category = tagValue(product.tags, "category") || databaseCategory || "Uncategorised";

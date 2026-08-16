@@ -41,6 +41,7 @@ export default async function AdminOrdersPage() {
               <th>Payment</th>
               <th>Total</th>
               <th>Fulfillment</th>
+              <th>Open</th>
             </tr>
           </thead>
           <tbody>
@@ -68,11 +69,12 @@ export default async function AdminOrdersPage() {
                     current={order.fulfillment_status}
                   />
                 </td>
+                <td><a className="admin-small-button" href={`/admin/orders/${order.id}`}>Details</a></td>
               </tr>
             ))}
             {!orders.length && (
               <tr>
-                <td colSpan={5}>No orders yet.</td>
+                <td colSpan={6}>No orders yet.</td>
               </tr>
             )}
           </tbody>

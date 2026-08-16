@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import GlobalStatusLoader from "./components/GlobalStatusLoader";
 import SocialContactLinks from "./components/SocialContactLinks";
+import CommerceAnalytics from "./components/CommerceAnalytics";
 
 const publicSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || "https://www.carnivalofclothes.com").replace(/\/$/, "");
 
@@ -65,6 +67,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className="selection:bg-[#e8b9b2] selection:text-[#3a2926]">
         <GlobalStatusLoader />
+        <Suspense fallback={null}><CommerceAnalytics /></Suspense>
         {children}
         <SocialContactLinks />
       </body>
