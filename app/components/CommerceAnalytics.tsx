@@ -16,12 +16,16 @@ export default function CommerceAnalytics() {
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, "1");
       const params = new URLSearchParams(search);
-      const source = params.get("utm_source") || sessionStorage.getItem("coc-source") || (document.referrer ? new URL(document.referrer).hostname : "direct");
+      let referringHost = "direct";
+      try { referringHost = document.referrer ? new URL(document.referrer).hostname : "direct"; } catch { referringHost = "direct"; }
+      const source = params.get("utm_source") || sessionStorage.getItem("coc-source") || referringHost;
       const medium = params.get("utm_medium") || sessionStorage.getItem("coc-medium") || (source === "direct" ? "none" : "referral");
       const campaign = params.get("utm_campaign") || sessionStorage.getItem("coc-campaign") || "none";
       sessionStorage.setItem("coc-source", source);
       sessionStorage.setItem("coc-medium", medium);
       sessionStorage.setItem("coc-campaign", campaign);
+      if (!sessionStorage.getItem("coc-landing")) sessionStorage.setItem("coc-landing", `${pathname}${search ? `?${search}` : ""}`);
+      if (!sessionStorage.getItem("coc-referrer")) sessionStorage.setItem("coc-referrer", document.referrer || "");
       const attribution = { source, medium, campaign, device: window.innerWidth < 768 ? "mobile" : window.innerWidth < 1100 ? "tablet" : "desktop" };
       trackCommerceEvent("page_view", attribution);
       if (pathname.startsWith("/product/")) trackCommerceEvent("product_view", { ...attribution, slug: pathname.split("/").filter(Boolean).pop() || "product" });

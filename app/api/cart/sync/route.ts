@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       anonymous_token: input.anonymousToken,
       status: nextStatus,
       last_activity_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+      expires_at: new Date(Date.now() + (nextStatus === "checkout" ? 183 : 30) * 86_400_000).toISOString(),
     }, { onConflict: "anonymous_token" }).select("id").single();
     if (cartError) throw cartError;
     await supabase.from("cart_items").delete().eq("cart_id", cart.id);

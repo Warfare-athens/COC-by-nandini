@@ -96,7 +96,21 @@ export async function createGuestOrder(input: CheckoutInput) {
   await supabase.from("tracking_events").insert({ fulfillment_id: fulfillment.id, status: "confirmed", message: "Your order has been confirmed and is being prepared." });
   await supabase.from("commerce_events").insert({ anonymous_id: input.cartToken || null, event_name: "purchase", order_id: order.id, metadata: { totalInr, itemCount: pricedItems.reduce((sum, item) => sum + item.quantity, 0), couponCode: input.couponCode || null, paymentMethod: input.paymentMethod } });
   if (couponValid) await supabase.from("promotions").update({ usage_count: Number(promotion!.usage_count || 0) + 1, updated_at: new Date().toISOString() }).eq("id", promotion!.id);
-  if (input.cartToken) await supabase.from("carts").update({ status: "converted", email: input.customer.email.toLowerCase(), phone: input.customer.phone, last_activity_at: new Date().toISOString() }).eq("anonymous_token", input.cartToken);
+  if (input.cartToken) await supabase.from("carts").update({
+    status: "converted",
+    full_name: input.customer.fullName,
+    email: input.customer.email.toLowerCase(),
+    phone: input.customer.phone,
+    line1: input.address.line1,
+    line2: input.address.line2 || null,
+    city: input.address.city,
+    state: input.address.state,
+    postal_code: input.address.postalCode,
+    country: input.address.country,
+    payment_method: input.paymentMethod,
+    checkout_step: "completed",
+    last_activity_at: new Date().toISOString(),
+  }).eq("anonymous_token", input.cartToken);
   return { ...order, items: pricedItems, shippingInr, subtotalInr };
 }
 

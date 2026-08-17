@@ -6,9 +6,44 @@ import { Signature } from "../components/Signature";
 import { trackCommerceEvent } from "../analytics-helper";
 
 const inputClass = "w-full rounded-lg border border-[#e8cdbc] bg-[#fffaf7] px-4 py-3 text-sm text-[#3a2926] outline-none transition placeholder:text-[#aa9188] focus:border-[#bb7068] focus:ring-2 focus:ring-[#bb7068]/15";
+const checkoutProfileKey = "coc-checkout-profile-v1";
+const checkoutProfileLifetime = 183 * 86_400_000;
+const emptyProfile = { fullName: "", email: "", phone: "", line1: "", line2: "", city: "", state: "", postalCode: "", country: "India" };
+type CheckoutProfile = typeof emptyProfile;
+type CheckoutField = keyof CheckoutProfile | "paymentMethod";
+
+function saveProfileToDevice(fields: CheckoutProfile, payment: string) {
+  localStorage.setItem(checkoutProfileKey, JSON.stringify({ fields, payment, updatedAt: Date.now(), expiresAt: Date.now() + checkoutProfileLifetime }));
+}
+
+function checkoutAttribution() {
+  let referrer = sessionStorage.getItem("coc-referrer") || document.referrer || "";
+  let source = sessionStorage.getItem("coc-source") || "";
+  if (!source) {
+    try { source = referrer ? new URL(referrer).hostname : "direct"; } catch { source = "direct"; referrer = ""; }
+  }
+  return {
+    source,
+    medium: sessionStorage.getItem("coc-medium") || (source === "direct" ? "none" : "referral"),
+    campaign: sessionStorage.getItem("coc-campaign") || "none",
+    landingPage: sessionStorage.getItem("coc-landing") || `${window.location.pathname}${window.location.search}`,
+    referrer,
+    device: window.innerWidth < 768 ? "mobile" as const : window.innerWidth < 1100 ? "tablet" as const : "desktop" as const,
+  };
+}
+
+async function saveCheckoutProgress(fields: CheckoutProfile, lastField: CheckoutField, paymentMethod?: string) {
+  const response = await fetch("/api/cart/lead", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ anonymousToken: getCartToken(), ...fields, paymentMethod, lastField, attribution: checkoutAttribution() }),
+  });
+  if (!response.ok) throw new Error("Unable to save checkout progress");
+}
 
 export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [profile, setProfile] = useState<CheckoutProfile>(emptyProfile);
   const [payment, setPayment] = useState("cod");
   const [placed, setPlaced] = useState(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
@@ -22,7 +57,21 @@ export default function CheckoutPage() {
   const checkoutTrackedRef = useRef(false);
 
   useEffect(() => {
-    const initialLoad = window.setTimeout(() => setItems(getCartItems()), 0);
+    const initialLoad = window.setTimeout(() => {
+      setItems(getCartItems());
+      try {
+        const saved = JSON.parse(localStorage.getItem(checkoutProfileKey) || "null") as { fields?: Partial<CheckoutProfile>; payment?: string; expiresAt?: number } | null;
+        if (saved?.expiresAt && saved.expiresAt > Date.now() && saved.fields) {
+          const restored = { ...emptyProfile, ...saved.fields };
+          const restoredPayment = saved.payment === "razorpay" ? "razorpay" : "cod";
+          setProfile(restored);
+          setPayment(restoredPayment);
+          if (Object.values(restored).some((value) => value && value !== "India")) saveCheckoutProgress(restored, "country", restoredPayment).catch(() => undefined);
+        } else if (saved) localStorage.removeItem(checkoutProfileKey);
+      } catch {
+        localStorage.removeItem(checkoutProfileKey);
+      }
+    }, 0);
     fetch("/api/storefront/settings").then(response=>response.json()).then(data=>{setFreeShippingThreshold(Number(data.freeShippingThreshold||2999));setShippingCharge(Number(data.shippingCharge||149))}).catch(()=>undefined);
     return () => window.clearTimeout(initialLoad);
   }, []);
@@ -75,15 +124,23 @@ export default function CheckoutPage() {
     };
   }, [subtotal]);
 
-  const captureCheckoutLead = (event: FormEvent<HTMLFormElement>) => {
-    const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") || "").trim();
-    const phone = String(form.get("phone") || "").trim();
+  const queueCheckoutSave = (fields: CheckoutProfile, lastField: CheckoutField, nextPayment = payment) => {
+    saveProfileToDevice(fields, nextPayment);
     if (leadTimerRef.current) window.clearTimeout(leadTimerRef.current);
-    if (!/^\S+@\S+\.\S+$/.test(email) && phone.replace(/\D/g, "").length < 8) return;
     leadTimerRef.current = window.setTimeout(() => {
-      fetch("/api/cart/lead", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ anonymousToken: getCartToken(), email: /^\S+@\S+\.\S+$/.test(email) ? email : "", phone }) }).catch(() => undefined);
-    }, 700);
+      saveCheckoutProgress(fields, lastField, lastField === "paymentMethod" ? nextPayment : undefined).catch(() => undefined);
+    }, 500);
+  };
+
+  const updateProfile = (field: keyof CheckoutProfile, value: string) => {
+    const next = { ...profile, [field]: value };
+    setProfile(next);
+    queueCheckoutSave(next, field);
+  };
+
+  const updatePayment = (value: string) => {
+    setPayment(value);
+    queueCheckoutSave(profile, "paymentMethod", value);
   };
 
   const placeOrder = async (event: FormEvent<HTMLFormElement>) => {
@@ -94,6 +151,7 @@ export default function CheckoutPage() {
     const form = new FormData(event.currentTarget);
     trackCommerceEvent("checkout_submitted", { itemCount: items.reduce((sum, item) => sum + item.quantity, 0), subtotalInr: subtotal, totalInr: total, paymentMethod: payment, hasCoupon: Boolean(couponCode) });
     try {
+      await saveCheckoutProgress(profile, "paymentMethod", payment);
       const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         customer: { fullName: form.get("fullName"), email: form.get("email"), phone: form.get("phone") },
         address: { line1: form.get("line1"), line2: form.get("line2"), city: form.get("city"), state: form.get("state"), postalCode: form.get("postalCode"), country: "India" },
@@ -139,7 +197,7 @@ export default function CheckoutPage() {
         </div>
       </header>
 
-      <form onSubmit={placeOrder} onInput={captureCheckoutLead} className="mx-auto grid max-w-6xl gap-8 px-4 py-7 lg:grid-cols-[1fr_420px] lg:gap-12 lg:px-8 lg:py-10">
+      <form onSubmit={placeOrder} className="mx-auto grid max-w-6xl gap-8 px-4 py-7 lg:grid-cols-[1fr_420px] lg:gap-12 lg:px-8 lg:py-10">
         <div className="space-y-6">
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#bb7068]">Secure checkout</span>
@@ -149,21 +207,21 @@ export default function CheckoutPage() {
           <section className="rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:p-6">
             <div className="mb-5 flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#f3dfd6] text-xs text-[#bb7068]">1</span><h2 className="text-sm font-semibold">Personal details</h2></div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <input name="fullName" className={`${inputClass} sm:col-span-2`} required autoComplete="name" placeholder="Full name" />
-              <input name="email" className={inputClass} type="email" required placeholder="Email address" />
-              <input name="phone" className={inputClass} type="tel" required placeholder="Phone number" />
+              <input name="fullName" value={profile.fullName} onChange={(event)=>updateProfile("fullName",event.target.value)} className={`${inputClass} sm:col-span-2`} required autoComplete="name" placeholder="Full name" />
+              <input name="email" value={profile.email} onChange={(event)=>updateProfile("email",event.target.value)} className={inputClass} type="email" required autoComplete="email" placeholder="Email address" />
+              <input name="phone" value={profile.phone} onChange={(event)=>updateProfile("phone",event.target.value)} className={inputClass} type="tel" required autoComplete="tel" placeholder="Phone number" />
             </div>
           </section>
 
           <section className="rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:p-6">
             <div className="mb-5 flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#f3dfd6] text-xs text-[#bb7068]">2</span><h2 className="text-sm font-semibold">Delivery address</h2></div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <input name="line1" className={`${inputClass} sm:col-span-2`} required placeholder="Address" />
-              <input name="line2" className={`${inputClass} sm:col-span-2`} placeholder="Apartment, suite, etc. (optional)" />
-              <input name="city" className={inputClass} required placeholder="City" />
-              <input name="state" className={inputClass} required placeholder="State" />
-              <input name="postalCode" className={inputClass} required inputMode="numeric" placeholder="PIN code" />
-              <select className={inputClass} defaultValue="India"><option>India</option></select>
+              <input name="line1" value={profile.line1} onChange={(event)=>updateProfile("line1",event.target.value)} className={`${inputClass} sm:col-span-2`} required autoComplete="address-line1" placeholder="Address" />
+              <input name="line2" value={profile.line2} onChange={(event)=>updateProfile("line2",event.target.value)} className={`${inputClass} sm:col-span-2`} autoComplete="address-line2" placeholder="Apartment, suite, etc. (optional)" />
+              <input name="city" value={profile.city} onChange={(event)=>updateProfile("city",event.target.value)} className={inputClass} required autoComplete="address-level2" placeholder="City" />
+              <input name="state" value={profile.state} onChange={(event)=>updateProfile("state",event.target.value)} className={inputClass} required autoComplete="address-level1" placeholder="State" />
+              <input name="postalCode" value={profile.postalCode} onChange={(event)=>updateProfile("postalCode",event.target.value)} className={inputClass} required autoComplete="postal-code" inputMode="numeric" placeholder="PIN code" />
+              <select name="country" value={profile.country} onChange={(event)=>updateProfile("country",event.target.value)} autoComplete="country-name" className={inputClass}><option>India</option></select>
             </div>
           </section>
 
@@ -172,7 +230,7 @@ export default function CheckoutPage() {
             <div className="grid gap-3 sm:grid-cols-3">
               {[["cod", "Cash on delivery"]].map(([value, label]) => (
                 <label className={`cursor-pointer rounded-lg border px-4 py-3 text-center text-xs transition ${payment === value ? "border-[#bb7068] bg-[#f7e6df] text-[#a95f5a]" : "border-[#e8cdbc]"}`} key={value}>
-                  <input className="sr-only" type="radio" name="payment" value={value} checked={payment === value} onChange={() => setPayment(value)} />{label}
+                  <input className="sr-only" type="radio" name="payment" value={value} checked={payment === value} onChange={() => updatePayment(value)} />{label}
                 </label>
               ))}
             </div>
