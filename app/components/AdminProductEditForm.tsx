@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { showGlobalStatus } from "@/app/global-status";
 import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, publicTags, tagValue, taxonomyTag } from "@/lib/product-taxonomy";
+import UniversalSelect from "./UniversalSelect";
+import AdminGstPriceHelper from "./AdminGstPriceHelper";
 
 type Variant = {
   id?: string;
@@ -90,6 +92,8 @@ export default function AdminProductEditForm({
   const [occasions, setOccasions] = useState<string[]>(
     OCCASIONS.filter((value) => (product.tags || []).includes(taxonomyTag("occasion", value))),
   );
+  const [editPrice, setEditPrice] = useState(String(product.price_inr || ""));
+  const [editTaxRate, setEditTaxRate] = useState(String(product.tax_rate || (product.price_inr > 2500 ? "18" : "5")));
 
   const updateVariant = (
     index: number,
@@ -303,11 +307,11 @@ export default function AdminProductEditForm({
           </div>
           <div className="admin-field">
             <label>Status</label>
-            <select name="status" defaultValue={product.status}>
+            <UniversalSelect name="status" defaultValue={product.status}>
               <option value="draft">Draft</option>
               <option value="active">Active</option>
               <option value="archived">Archived</option>
-            </select>
+            </UniversalSelect>
           </div>
           <div className="admin-field full">
             <label>Short description</label>
@@ -331,16 +335,24 @@ export default function AdminProductEditForm({
           <h2>Pricing and tax</h2>
         </div>
         <div className="admin-form-grid">
-          <div className="admin-field"><label>Category</label><select value={category} onChange={(event) => { setCategory(event.target.value); setSubcategory(""); }}><option value="">Select category</option>{PRODUCT_CATEGORIES.map((value) => <option key={value}>{value}</option>)}</select></div>
-          <div className="admin-field"><label>Subcategory</label><select value={subcategory} onChange={(event) => setSubcategory(event.target.value)} disabled={!category || !PRODUCT_TAXONOMY[category as keyof typeof PRODUCT_TAXONOMY]?.length}><option value="">None</option>{category && PRODUCT_TAXONOMY[category as keyof typeof PRODUCT_TAXONOMY]?.map((value) => <option key={value}>{value}</option>)}</select></div>
+          <div className="admin-field"><label>Category</label><UniversalSelect value={category} onChange={(event) => { setCategory(event.target.value); setSubcategory(""); }}><option value="">Select category</option>{PRODUCT_CATEGORIES.map((value) => <option key={value}>{value}</option>)}</UniversalSelect></div>
+          <div className="admin-field"><label>Subcategory</label><UniversalSelect value={subcategory} onChange={(event) => setSubcategory(event.target.value)} disabled={!category || !PRODUCT_TAXONOMY[category as keyof typeof PRODUCT_TAXONOMY]?.length}><option value="">None</option>{category && PRODUCT_TAXONOMY[category as keyof typeof PRODUCT_TAXONOMY]?.map((value) => <option key={value}>{value}</option>)}</UniversalSelect></div>
           <div className="admin-field full"><label>Wear type</label><div className="admin-checks">{OCCASIONS.map((value) => <label key={value}><input type="checkbox" checked={occasions.includes(value)} onChange={(event) => setOccasions((current) => event.target.checked ? [...current, value] : current.filter((item) => item !== value))} />{value}</label>)}</div></div>
-          <div className="admin-field">
-            <label>Selling price</label>
+          <div className="admin-field" style={{ position: "relative" }}>
+            <AdminGstPriceHelper
+              price={editPrice}
+              onApplyPrice={(newPrice, rate) => {
+                setEditPrice(newPrice);
+                if (rate > 0) setEditTaxRate(String(rate));
+              }}
+              label="Selling price"
+            />
             <input
               name="price_inr"
               type="number"
               min="1"
-              defaultValue={product.price_inr}
+              value={editPrice}
+              onChange={(e) => setEditPrice(e.target.value)}
               required
             />
           </div>
@@ -369,7 +381,8 @@ export default function AdminProductEditForm({
               type="number"
               min="0"
               step="0.01"
-              defaultValue={product.tax_rate || "0"}
+              value={editTaxRate}
+              onChange={(e) => setEditTaxRate(e.target.value)}
             />
           </div>
           <div className="admin-field">
@@ -440,13 +453,43 @@ export default function AdminProductEditForm({
       <section className="admin-editor-section">
         <div className="admin-editor-title">
           <h2>Variants and inventory</h2>
-          <button
-            type="button"
-            className="admin-editor-action"
-            onClick={addVariant}
-          >
-            Add size
-          </button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              type="button"
+              className="admin-editor-action"
+              style={{ background: "#fbf0eb", color: "#bb7068", border: "1px solid #ebdcd0" }}
+              onClick={() => {
+                const existing = new Set(variants.map(v => (v.size || v.title || "").toUpperCase()));
+                const targetSizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+                const missing = targetSizes.filter(s => !existing.has(s));
+                if (missing.length === 0) return;
+                setVariants(prev => [
+                  ...prev,
+                  ...missing.map(size => ({
+                    id: "",
+                    sku: `${product.sku || "SKU"}-${size.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}`,
+                    title: `Size ${size}`,
+                    size,
+                    color: null,
+                    price_inr: null,
+                    compare_at_price_inr: null,
+                    inventory_quantity: 0,
+                    low_stock_threshold: 3,
+                    is_active: true,
+                  }))
+                ]);
+              }}
+            >
+              + Add Missing XS–4XL
+            </button>
+            <button
+              type="button"
+              className="admin-editor-action"
+              onClick={addVariant}
+            >
+              Add size
+            </button>
+          </div>
         </div>
         <div className="admin-compact-size-list">
           {variants.map((variant, index) => (

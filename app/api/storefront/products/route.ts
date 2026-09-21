@@ -8,7 +8,7 @@ export async function GET() {
   const { data, error } = await getSupabaseAdmin()
     .from("products")
     .select(
-      "id,name,slug,short_description,description,hero_image_url,price_inr,compare_at_price_inr,tags,is_featured,is_best_seller,is_new_arrival,created_at",
+      "id,name,slug,short_description,description,hero_image_url,price_inr,compare_at_price_inr,tags,is_featured,is_best_seller,is_new_arrival,created_at,product_variants(id,size,title,inventory_quantity,is_active)",
     )
     .eq("status", "active")
     .order("published_at", { ascending: false });

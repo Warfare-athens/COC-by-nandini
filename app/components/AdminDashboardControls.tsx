@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { showGlobalStatus } from "../global-status";
+import UniversalSelect from "./UniversalSelect";
 
 export default function AdminDashboardControls({ days }: { days: number }) {
   const router = useRouter();
@@ -28,12 +29,12 @@ export default function AdminDashboardControls({ days }: { days: number }) {
     <div className="command-controls">
       <label>
         <span>Window</span>
-        <select value={days} onChange={(event) => changeWindow(event.target.value)} aria-label="Dashboard time window">
+        <UniversalSelect controlSize="compact" fluid={false} value={days} onChange={(event) => changeWindow(event.target.value)} aria-label="Dashboard time window">
           <option value="1">Today</option>
           <option value="7">Last 7 days</option>
           <option value="30">Last 30 days</option>
           <option value="90">Last 90 days</option>
-        </select>
+        </UniversalSelect>
       </label>
       <button type="button" onClick={refresh} className={refreshing ? "is-refreshing" : ""} aria-label="Refresh dashboard">↻</button>
     </div>

@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, taxonomyTag } from "@/lib/product-taxonomy";
 import { showGlobalStatus } from "@/app/global-status";
+import UniversalSelect from "./UniversalSelect";
+import AdminGstPriceHelper from "./AdminGstPriceHelper";
 
 type GeneratedFields = {
   slug: string;
@@ -47,13 +49,18 @@ const emptyGenerated: GeneratedFields = {
   imageAltTexts: [],
 };
 
+export const DEFAULT_SIZES_UP_TO_4XL = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+
 export default function AdminProductForm() {
   const [name, setName] = useState("");
   const [priceInr, setPriceInr] = useState("");
+  const [taxRate, setTaxRate] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [generated, setGenerated] = useState<GeneratedFields>(emptyGenerated);
-  const [sizeInventory, setSizeInventory] = useState<SizeInventory[]>([]);
+  const [sizeInventory, setSizeInventory] = useState<SizeInventory[]>(() =>
+    DEFAULT_SIZES_UP_TO_4XL.map((size) => ({ size, quantity: 0 }))
+  );
   const [aiGenerated, setAiGenerated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [statusText, setStatusText] = useState("");
@@ -180,8 +187,15 @@ export default function AdminProductForm() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       setGenerated(data.product);
+      const isApparel = data.product.category !== "Accessories";
+      const rawSizes = data.product.suggestedSizes || [];
+      const hasStandardSizes = rawSizes.some((s: string) => ["XS", "S", "M", "L", "XL"].includes(s.toUpperCase()));
+      const sizesToSet = (isApparel || hasStandardSizes)
+        ? DEFAULT_SIZES_UP_TO_4XL
+        : rawSizes.length > 0 ? rawSizes : DEFAULT_SIZES_UP_TO_4XL;
+
       setSizeInventory(
-        (data.product.suggestedSizes || []).map((size: string) => ({
+        sizesToSet.map((size: string) => ({
           size,
           quantity: 0,
         })),
@@ -241,6 +255,7 @@ export default function AdminProductForm() {
       description: generated.description,
       heroImageUrl: images[0] || form.get("heroImageUrl"),
       priceInr: Number(priceInr),
+      taxRate: taxRate || (Number(priceInr) > 2500 ? "18.00" : "5.00"),
       compareAtPriceInr: compareAtPrice
         ? Number(compareAtPrice)
         : undefined,
@@ -316,14 +331,21 @@ export default function AdminProductForm() {
               required
             />
           </div>
-          <div className="admin-field">
-            <label>Price (INR)</label>
+          <div className="admin-field" style={{ position: "relative" }}>
+            <AdminGstPriceHelper
+              price={priceInr}
+              onApplyPrice={(newPrice, rate) => {
+                setPriceInr(newPrice);
+                if (rate > 0) setTaxRate(String(rate));
+              }}
+            />
             <input
               value={priceInr}
               onChange={(event) => setPriceInr(event.target.value)}
               type="number"
               min="1"
               required
+              placeholder="e.g. 899"
             />
           </div>
           <div className="admin-field full">
@@ -452,8 +474,8 @@ export default function AdminProductForm() {
                 onChange={(event) => update("description", event.target.value)}
               />
             </div>
-            <div className="admin-field"><label>Category</label><select value={generated.category} onChange={(event) => setGenerated((current) => ({ ...current, category: event.target.value, subcategory: "" }))} required><option value="">Select category</option>{PRODUCT_CATEGORIES.map((value) => <option key={value}>{value}</option>)}</select></div>
-            <div className="admin-field"><label>Subcategory</label><select value={generated.subcategory} onChange={(event) => update("subcategory", event.target.value)} disabled={!generated.category || !(PRODUCT_TAXONOMY[generated.category as keyof typeof PRODUCT_TAXONOMY]?.length)}><option value="">None</option>{generated.category && PRODUCT_TAXONOMY[generated.category as keyof typeof PRODUCT_TAXONOMY]?.map((value) => <option key={value}>{value}</option>)}</select></div>
+            <div className="admin-field"><label>Category</label><UniversalSelect value={generated.category} onChange={(event) => setGenerated((current) => ({ ...current, category: event.target.value, subcategory: "" }))} required><option value="">Select category</option>{PRODUCT_CATEGORIES.map((value) => <option key={value}>{value}</option>)}</UniversalSelect></div>
+            <div className="admin-field"><label>Subcategory</label><UniversalSelect value={generated.subcategory} onChange={(event) => update("subcategory", event.target.value)} disabled={!generated.category || !(PRODUCT_TAXONOMY[generated.category as keyof typeof PRODUCT_TAXONOMY]?.length)}><option value="">None</option>{generated.category && PRODUCT_TAXONOMY[generated.category as keyof typeof PRODUCT_TAXONOMY]?.map((value) => <option key={value}>{value}</option>)}</UniversalSelect></div>
             <div className="admin-field full"><label>Wear type</label><div className="admin-checks">{OCCASIONS.map((value) => <label key={value}><input type="checkbox" checked={generated.occasions.includes(value)} onChange={(event) => update("occasions", event.target.checked ? [...generated.occasions, value] : generated.occasions.filter((item) => item !== value))} />{value}</label>)}</div></div>
             <div className="admin-field">
               <label>Tags</label>
@@ -473,7 +495,29 @@ export default function AdminProductForm() {
             <div className="admin-field full">
               <div className="admin-inline-heading">
                 <label>Sizes and inventory</label>
-                <button type="button" onClick={() => setSizeInventory((current) => [...current, { size: "", quantity: 0 }])}>+ Add size</button>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: "#bb7068",
+                      background: "#fbf0eb",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      border: "1px solid #ebdcd0",
+                      cursor: "pointer",
+                    }}
+                    onClick={() =>
+                      setSizeInventory(
+                        DEFAULT_SIZES_UP_TO_4XL.map((size) => ({ size, quantity: 0 }))
+                      )
+                    }
+                  >
+                    + Load XS–4XL
+                  </button>
+                  <button type="button" onClick={() => setSizeInventory((current) => [...current, { size: "", quantity: 0 }])}>+ Add size</button>
+                </div>
               </div>
               <div className="admin-compact-size-list">
                 {sizeInventory.map((item, index) => (

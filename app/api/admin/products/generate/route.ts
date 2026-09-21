@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
@@ -19,7 +21,7 @@ const generatedProductSchema = z.object({
   occasions: z.array(z.enum(["Everyday", "Party Wear"])).min(1).max(2),
   tags: z.array(z.string()).min(3).max(12),
   colors: z.array(z.string()).max(8),
-  suggestedSizes: z.array(z.string()).max(10),
+  suggestedSizes: z.array(z.string()).max(12),
   material: z.string().max(120),
   careInstructions: z.string().max(500),
   styleNotes: z.string().max(500),
@@ -43,7 +45,7 @@ export async function POST(request: Request) {
   try {
     const input = requestSchema.parse(await request.json());
     const images = await Promise.all(input.imageUrls.map(imagePart));
-    const prompt = `You are the visual catalog specialist for Carnival of Clothes, an Indian women's fashion store. Inspect the images as the primary evidence and use the supplied name as supporting context. Classify only within this fixed taxonomy: Top Wear > Shirts/T-shirts/Crop Tops/Tank Tops/Bodysuits; Bottom Wear > Jeans/Trousers/Cargo Pants/Palazzo Pants/Skirts/Shorts; Indian > Kurtis/Kurta Sets/Sarees/Lehenga Sets/Anarkali Suits/Dupattas; Korean > Korean Tops/Korean Dresses/Korean Co-ords/Oversized Shirts/Pleated Skirts; Dresses (no subcategory); Co-ord Sets (no subcategory); Accessories > Handbags/Jewellery/Sunglasses/Belts/Hair Accessories/Scarves. Never invent a category. Identify garment construction visually even when its type is missing from the name—for example a visually identifiable kurti belongs to Indian > Kurtis. Also suggest Everyday, Party Wear, or both as occasions. Do not invent fabric composition, technical, sustainability, or care claims. Price: INR ${input.priceInr}. Product name: ${input.name}. Return polished Indian-English copy, SEO, alt text, and sensible sizes. Plain text, not markdown.`;
+    const prompt = `You are the visual catalog specialist for Carnival of Clothes, an Indian women's fashion store. Inspect the images as the primary evidence and use the supplied name as supporting context. Classify only within this fixed taxonomy: Top Wear > Shirts/T-shirts/Crop Tops/Tank Tops/Bodysuits; Bottom Wear > Jeans/Trousers/Cargo Pants/Palazzo Pants/Skirts/Shorts; Indian > Kurtis/Kurta Sets/Sarees/Lehenga Sets/Anarkali Suits/Dupattas; Korean > Korean Tops/Korean Dresses/Korean Co-ords/Oversized Shirts/Pleated Skirts; Dresses (no subcategory); Co-ord Sets (no subcategory); Accessories > Handbags/Jewellery/Sunglasses/Belts/Hair Accessories/Scarves. Never invent a category. Identify garment construction visually even when its type is missing from the name—for example a visually identifiable kurti belongs to Indian > Kurtis. Also suggest Everyday, Party Wear, or both as occasions. Do not invent fabric composition, technical, sustainability, or care claims. Price: INR ${input.priceInr}. Product name: ${input.name}. For clothing/apparel, always return inclusive Indian sizes from XS to 4XL: ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"] unless the product is an accessory (use ["One Size"]) or free size. Return polished Indian-English copy, SEO, alt text, and sensible sizes. Plain text, not markdown.`;
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: process.env.GEMINI_MODEL || "gemini-3.5-flash",
@@ -67,7 +69,17 @@ export async function POST(request: Request) {
     trimText("styleNotes", 500);
     trimText("seoTitle", 70);
     trimText("seoDescription", 170);
-    for (const [key, maximum] of [["tags", 12], ["colors", 8], ["suggestedSizes", 10], ["searchKeywords", 20], ["imageAltTexts", 5]] as const) {
+
+    // Ensure apparel products have the full inclusive sizing up to 4XL
+    if (raw.category !== "Accessories") {
+      const existing = Array.isArray(raw.suggestedSizes) ? raw.suggestedSizes : [];
+      const hasGarmentSizes = existing.some((s) => typeof s === "string" && ["XS", "S", "M", "L", "XL"].includes(s.toUpperCase()));
+      if (hasGarmentSizes || existing.length === 0) {
+        raw.suggestedSizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+      }
+    }
+
+    for (const [key, maximum] of [["tags", 12], ["colors", 8], ["suggestedSizes", 12], ["searchKeywords", 20], ["imageAltTexts", 5]] as const) {
       if (Array.isArray(raw[key])) raw[key] = raw[key].slice(0, maximum);
     }
     const generated = generatedProductSchema.parse(raw);

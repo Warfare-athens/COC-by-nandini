@@ -1,0 +1,45 @@
+.canvas { min-height: 100vh; background: #f4f1ef; padding: 28px; color: #302724; font-family: "Work Sans", sans-serif; }
+.actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 920px; margin: 0 auto 16px; }
+.actions a,.actions button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 8px; border: 1px solid #dfd4cf; border-radius: 999px; background: #fff; padding: 0 17px; color: #594843; font-size: 11px; font-weight: 650; }
+.actions button { border-color: #bc746c; background: #bc746c; color: #fff; }
+.document { max-width: 920px; margin: auto; border: 1px solid #e4d9d4; border-radius: 18px; background: #fffdfb; padding: clamp(28px,5vw,62px); box-shadow: 0 24px 70px rgba(53,37,31,.08); }
+.header,.title,.addresses { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; }
+.brand { display: flex; align-items: center; gap: 15px; }
+.brand img { width: 58px; height: 58px; border-radius: 14px; object-fit: cover; }
+.brand h1 { margin: 0; font-family: "Instrument Serif", serif; font-size: 30px; font-weight: 400; color: #713f39; }
+.brand p,.contact span,.contact b { display: block; margin: 3px 0 0; font-size: 10px; line-height: 1.5; }
+.contact { text-align: right; color: #796660; }
+.contact b { color: #4b3a35; }
+.title { margin-top: 42px; border-block: 1px solid #e8d9d3; padding: 25px 0; }
+.title small,.addresses small { display: block; color: #b26760; font-size: 9px; font-weight: 750; letter-spacing: .16em; }
+.title h2 { margin: 7px 0 0; font-size: clamp(25px,4vw,35px); font-weight: 650; letter-spacing: -.035em; }
+.title dl { display: grid; grid-template-columns: auto auto; gap: 7px 24px; margin: 0; font-size: 10px; }
+.title dt { color: #8d7b75; }
+.title dd { margin: 0; text-align: right; text-transform: capitalize; }
+.addresses { padding: 27px 0; }
+.addresses > div { width: 48%; }
+.addresses strong { display: block; margin-top: 9px; font-size: 12px; }
+.addresses p { margin: 6px 0 0; color: #715f59; font-size: 10px; line-height: 1.75; }
+.tableWrap { overflow-x: auto; }
+.document table { width: 100%; border-collapse: collapse; }
+.document th { border-block: 1px solid #dacbc5; background: #fbf3ef; padding: 11px 10px; color: #8c6d65; font-size: 8px; letter-spacing: .13em; text-align: left; text-transform: uppercase; }
+.document td { border-bottom: 1px solid #eee3de; padding: 15px 10px; font-size: 10px; }
+.document th:nth-child(n+3),.document td:nth-child(n+3) { text-align: right; }
+.document td b,.document td span { display: block; }
+.document td span { margin-top: 4px; color: #8d7972; font-size: 9px; }
+.summary { display: flex; justify-content: flex-end; padding: 28px 0; }
+.summary > div { display: grid; grid-template-columns: 150px 125px; gap: 9px; text-align: right; font-size: 10px; }
+.summary span { color: #88756f; }
+.summary strong { border-top: 1px solid #80605a; padding-top: 10px; color: #704039; font-size: 13px; }
+.footer { position: static; display: block; border-top: 1px solid #e8d9d3; background: transparent; padding: 20px 0 0; color: #302724; text-align: center; }
+.footer p { max-width: none; margin: 0; color: #854a44; font-family: "Instrument Serif", serif; font-size: 19px; }
+.footer span { display: block; margin-top: 6px; color: #8a7973; font-size: 9px; }
+:global(body:has([data-invoice-page]) > aside[aria-label="Contact Carnival of Clothes"]) { display: none; }
+@media (max-width: 620px) { .canvas { padding: 12px; } .document { border-radius: 13px; padding: 23px 18px; } .header,.title,.addresses { align-items: stretch; flex-direction: column; gap: 20px; } .contact { text-align: left; } .title dl { width: 100%; } .addresses > div { width: 100%; } .document th,.document td { padding-inline: 7px; } .document th:nth-child(2),.document td:nth-child(2) { display: none; } .summary > div { width: 100%; grid-template-columns: 1fr auto; } }
+@page { size: A4; margin: 12mm 15mm; }
+@media print {
+  body { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .canvas { min-height: 0; background: #fff !important; padding: 0 !important; }
+  .document { max-width: 100% !important; border: 0 !important; border-radius: 0 !important; padding: 0 !important; box-shadow: none !important; }
+  :global(.invoice-print-hide), :global(body > aside), :global(body > button), :global(header) { display: none !important; }
+}

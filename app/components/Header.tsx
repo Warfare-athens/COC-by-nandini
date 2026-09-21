@@ -268,6 +268,12 @@ export default function Header({ activeTab }: HeaderProps) {
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
           </button>
+          <a href="/account" className="icon-button" aria-label="My Account & Orders" title="My Account & Orders" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </a>
           <button className="bag" aria-label="Cart" onClick={() => setCartOpen(true)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
@@ -388,14 +394,14 @@ export default function Header({ activeTab }: HeaderProps) {
                   </svg>
                   <span>Track Order</span>
                 </a>
-                <a className="my-orders-link" href="/track-order" onClick={() => setMenuOpen(false)}>
+                <a className="my-orders-link" href="/account" onClick={() => setMenuOpen(false)}>
                   <span>My Orders</span>
                   <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 2h9l3 3v17H6z" /><path d="M14 2v4h4M9 11h6M9 15h6" />
                   </svg>
                 </a>
               </div>
-              <a className="account-button" href="/track-order" onClick={() => setMenuOpen(false)}>
+              <a className="account-button" href="/account" onClick={() => setMenuOpen(false)}>
                 <span>My Account</span>
                 <span className="account-icon">
                   <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

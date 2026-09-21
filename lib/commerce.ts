@@ -1,5 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin, commerceConfigured } from "@/db";
+import { sendOrderConfirmation } from "@/lib/email";
+import { sendWhatsAppOrderConfirmationByOrderId } from "@/lib/whatsapp";
 import { z } from "zod";
 
 export const checkoutSchema = z.object({
@@ -64,54 +66,271 @@ export async function createGuestOrder(input: CheckoutInput) {
   if (addressError) throw addressError;
 
   const number = orderNumber();
+  const isPrepaid = input.paymentMethod === "razorpay";
   const { data: order, error: orderError } = await supabase.from("orders").insert({
-    order_number: number, email: input.customer.email.toLowerCase(), phone: input.customer.phone,
-    status: "confirmed", payment_status: input.paymentMethod === "cod" ? "pending" : "payment_pending",
-    payment_method: input.paymentMethod, fulfillment_status: "unfulfilled", subtotal_inr: subtotalInr,
-    shipping_inr: shippingInr, discount_inr: discountInr, total_inr: totalInr, shipping_address_id: address.id,
-    coupon_code: couponValid ? promotion!.code : null, customer_note: input.customerNote || null,
-  }).select("id,order_number,status,total_inr,email").single();
+    order_number: number,
+    email: input.customer.email.toLowerCase(),
+    phone: input.customer.phone,
+    status: isPrepaid ? "pending_payment" : "confirmed",
+    payment_status: isPrepaid ? "payment_pending" : "pending",
+    payment_method: input.paymentMethod,
+    fulfillment_status: "unfulfilled",
+    subtotal_inr: subtotalInr,
+    shipping_inr: shippingInr,
+    discount_inr: discountInr,
+    total_inr: totalInr,
+    shipping_address_id: address.id,
+    coupon_code: couponValid ? promotion!.code : null,
+    customer_note: input.customerNote || null,
+  }).select("id,order_number,status,payment_status,payment_method,total_inr,email").single();
   if (orderError) throw orderError;
 
   const { error: itemsError } = await supabase.from("order_items").insert(pricedItems.map((item) => ({
-    order_id: order.id, product_id: item.productId, variant_id: item.variantId, product_name: item.name, variant_title: item.variantTitle || `Size ${item.size}`, sku: item.sku,
-    image_url: item.imageUrl, quantity: item.quantity, unit_price_inr: item.unitPriceInr, total_inr: item.totalInr,
+    order_id: order.id,
+    product_id: item.productId,
+    variant_id: item.variantId,
+    product_name: item.name,
+    variant_title: item.variantTitle || `Size ${item.size}`,
+    sku: item.sku,
+    image_url: item.imageUrl,
+    quantity: item.quantity,
+    unit_price_inr: item.unitPriceInr,
+    total_inr: item.totalInr,
   })));
   if (itemsError) throw itemsError;
 
-  const inventoryTotals = new Map<string, number>();
-  for (const item of pricedItems) inventoryTotals.set(item.variantId, (inventoryTotals.get(item.variantId) || 0) + item.quantity);
-  for (const [variantId, quantity] of inventoryTotals) {
-    const item = pricedItems.find((candidate) => candidate.variantId === variantId)!;
-    const { data: updatedVariant, error: inventoryError } = await supabase.from("product_variants")
-      .update({ inventory_quantity: Number((variants || []).find((variant) => variant.id === variantId)?.inventory_quantity || 0) - quantity })
-      .eq("id", variantId).gte("inventory_quantity", quantity).select("id").maybeSingle();
-    if (inventoryError || !updatedVariant) throw inventoryError || new Error(`${item.name} became unavailable while placing the order. Please try again.`);
-    const { error: movementError } = await supabase.from("inventory_movements").insert({ variant_id: variantId, quantity_delta: -quantity, reason: "order", reference_type: "order", reference_id: order.id, note: number });
-    if (movementError) throw movementError;
+  // For COD orders, confirm immediately: deduct inventory, create fulfillment, update cart
+  if (!isPrepaid) {
+    const inventoryTotals = new Map<string, number>();
+    for (const item of pricedItems) inventoryTotals.set(item.variantId, (inventoryTotals.get(item.variantId) || 0) + item.quantity);
+    for (const [variantId, quantity] of inventoryTotals) {
+      const item = pricedItems.find((candidate) => candidate.variantId === variantId)!;
+      const { data: updatedVariant, error: inventoryError } = await supabase.from("product_variants")
+        .update({ inventory_quantity: Number((variants || []).find((variant) => variant.id === variantId)?.inventory_quantity || 0) - quantity })
+        .eq("id", variantId).gte("inventory_quantity", quantity).select("id").maybeSingle();
+      if (inventoryError || !updatedVariant) throw inventoryError || new Error(`${item.name} became unavailable while placing the order. Please try again.`);
+      const { error: movementError } = await supabase.from("inventory_movements").insert({ variant_id: variantId, quantity_delta: -quantity, reason: "order", reference_type: "order", reference_id: order.id, note: number });
+      if (movementError) throw movementError;
+    }
+
+    const { data: fulfillment, error: fulfillmentError } = await supabase.from("fulfillments").insert({ order_id: order.id, status: "processing" }).select("id").single();
+    if (fulfillmentError) throw fulfillmentError;
+    await supabase.from("tracking_events").insert({ fulfillment_id: fulfillment.id, status: "confirmed", message: "Your order has been confirmed and is being prepared." });
+    await supabase.from("commerce_events").insert({ anonymous_id: input.cartToken || null, event_name: "purchase", order_id: order.id, metadata: { totalInr, itemCount: pricedItems.reduce((sum, item) => sum + item.quantity, 0), couponCode: input.couponCode || null, paymentMethod: input.paymentMethod } });
+    if (couponValid) await supabase.from("promotions").update({ usage_count: Number(promotion!.usage_count || 0) + 1, updated_at: new Date().toISOString() }).eq("id", promotion!.id);
+    if (input.cartToken) await supabase.from("carts").update({
+      status: "converted",
+      full_name: input.customer.fullName,
+      email: input.customer.email.toLowerCase(),
+      phone: input.customer.phone,
+      line1: input.address.line1,
+      line2: input.address.line2 || null,
+      city: input.address.city,
+      state: input.address.state,
+      postal_code: input.address.postalCode,
+      country: input.address.country,
+      payment_method: input.paymentMethod,
+      checkout_step: "completed",
+      last_activity_at: new Date().toISOString(),
+    }).eq("anonymous_token", input.cartToken);
+  } else {
+    // For Razorpay prepaid: save shipping address and advance cart step to payment, but DO NOT convert yet
+    if (input.cartToken) await supabase.from("carts").update({
+      full_name: input.customer.fullName,
+      email: input.customer.email.toLowerCase(),
+      phone: input.customer.phone,
+      line1: input.address.line1,
+      line2: input.address.line2 || null,
+      city: input.address.city,
+      state: input.address.state,
+      postal_code: input.address.postalCode,
+      country: input.address.country,
+      payment_method: input.paymentMethod,
+      checkout_step: "payment",
+      last_activity_at: new Date().toISOString(),
+    }).eq("anonymous_token", input.cartToken);
   }
 
-  const { data: fulfillment, error: fulfillmentError } = await supabase.from("fulfillments").insert({ order_id: order.id, status: "processing" }).select("id").single();
-  if (fulfillmentError) throw fulfillmentError;
-  await supabase.from("tracking_events").insert({ fulfillment_id: fulfillment.id, status: "confirmed", message: "Your order has been confirmed and is being prepared." });
-  await supabase.from("commerce_events").insert({ anonymous_id: input.cartToken || null, event_name: "purchase", order_id: order.id, metadata: { totalInr, itemCount: pricedItems.reduce((sum, item) => sum + item.quantity, 0), couponCode: input.couponCode || null, paymentMethod: input.paymentMethod } });
-  if (couponValid) await supabase.from("promotions").update({ usage_count: Number(promotion!.usage_count || 0) + 1, updated_at: new Date().toISOString() }).eq("id", promotion!.id);
-  if (input.cartToken) await supabase.from("carts").update({
-    status: "converted",
-    full_name: input.customer.fullName,
-    email: input.customer.email.toLowerCase(),
-    phone: input.customer.phone,
-    line1: input.address.line1,
-    line2: input.address.line2 || null,
-    city: input.address.city,
-    state: input.address.state,
-    postal_code: input.address.postalCode,
-    country: input.address.country,
-    payment_method: input.paymentMethod,
-    checkout_step: "completed",
-    last_activity_at: new Date().toISOString(),
-  }).eq("anonymous_token", input.cartToken);
   return { ...order, items: pricedItems, shippingInr, subtotalInr };
+}
+
+export async function confirmPaidOrder(
+  orderIdentifier: { orderNumber?: string; orderId?: string },
+  paymentDetails: {
+    provider: string;
+    providerPaymentId: string;
+    providerOrderId?: string;
+    rawPayload?: unknown;
+  }
+) {
+  if (!commerceConfigured()) throw new Error("Commerce is waiting for Supabase configuration.");
+  const supabase = getSupabaseAdmin();
+
+  let query = supabase.from("orders").select("id,order_number,email,total_inr,status,payment_status,coupon_code,shipping_address_id");
+  if (orderIdentifier.orderNumber) {
+    query = query.eq("order_number", orderIdentifier.orderNumber);
+  } else if (orderIdentifier.orderId) {
+    query = query.eq("id", orderIdentifier.orderId);
+  } else {
+    throw new Error("Order number or ID required.");
+  }
+
+  const { data: order, error: orderErr } = await query.single();
+  if (orderErr || !order) throw new Error("Order not found for payment confirmation.");
+
+  // Idempotency: if already confirmed and paid, avoid duplicate operations
+  if (order.status === "confirmed" && order.payment_status === "paid") {
+    return order;
+  }
+
+  // 1. Confirm order and mark paid
+  await supabase
+    .from("orders")
+    .update({
+      status: "confirmed",
+      payment_status: "paid",
+      payment_provider_order_id: paymentDetails.providerOrderId || undefined,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", order.id);
+
+  // 2. Update payments table record
+  if (paymentDetails.providerOrderId) {
+    const { data: existingPayment } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("provider_order_id", paymentDetails.providerOrderId)
+      .maybeSingle();
+
+    if (existingPayment) {
+      await supabase
+        .from("payments")
+        .update({
+          status: "paid",
+          provider_payment_id: paymentDetails.providerPaymentId,
+          raw_payload: paymentDetails.rawPayload || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingPayment.id);
+    } else {
+      await supabase.from("payments").insert({
+        order_id: order.id,
+        provider: paymentDetails.provider,
+        provider_order_id: paymentDetails.providerOrderId,
+        provider_payment_id: paymentDetails.providerPaymentId,
+        amount_inr: Number(order.total_inr),
+        status: "paid",
+        raw_payload: paymentDetails.rawPayload || null,
+      });
+    }
+  }
+
+  // 3. Deduct inventory for items
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("variant_id,quantity,product_name")
+    .eq("order_id", order.id);
+
+  if (items && items.length > 0) {
+    const inventoryTotals = new Map<string, number>();
+    for (const item of items) {
+      if (item.variant_id) {
+        inventoryTotals.set(item.variant_id, (inventoryTotals.get(item.variant_id) || 0) + item.quantity);
+      }
+    }
+    for (const [variantId, quantity] of inventoryTotals) {
+      const { data: v } = await supabase
+        .from("product_variants")
+        .select("inventory_quantity")
+        .eq("id", variantId)
+        .maybeSingle();
+
+      if (v) {
+        await supabase
+          .from("product_variants")
+          .update({ inventory_quantity: Math.max(0, Number(v.inventory_quantity || 0) - quantity) })
+          .eq("id", variantId);
+
+        await supabase.from("inventory_movements").insert({
+          variant_id: variantId,
+          quantity_delta: -quantity,
+          reason: "order",
+          reference_type: "order",
+          reference_id: order.id,
+          note: order.order_number,
+        });
+      }
+    }
+  }
+
+  // 4. Create fulfillment & tracking event
+  const { data: existingFulfillment } = await supabase
+    .from("fulfillments")
+    .select("id")
+    .eq("order_id", order.id)
+    .maybeSingle();
+
+  let fulfillmentId = existingFulfillment?.id;
+  if (!fulfillmentId) {
+    const { data: newFulfillment } = await supabase
+      .from("fulfillments")
+      .insert({ order_id: order.id, status: "processing" })
+      .select("id")
+      .single();
+    fulfillmentId = newFulfillment?.id;
+  }
+
+  if (fulfillmentId) {
+    await supabase.from("tracking_events").insert({
+      fulfillment_id: fulfillmentId,
+      status: "confirmed",
+      message: `Payment verified (${paymentDetails.providerPaymentId}). Order confirmed and being prepared.`,
+    });
+  }
+
+  // 5. Record purchase commerce event
+  await supabase.from("commerce_events").insert({
+    event_name: "purchase",
+    order_id: order.id,
+    metadata: {
+      totalInr: order.total_inr,
+      orderNumber: order.order_number,
+      paymentMethod: "razorpay",
+      paymentId: paymentDetails.providerPaymentId,
+    },
+  });
+
+  // 6. Increment coupon usage if used
+  if (order.coupon_code) {
+    const { data: promo } = await supabase
+      .from("promotions")
+      .select("id,usage_count")
+      .eq("code", order.coupon_code)
+      .maybeSingle();
+    if (promo) {
+      await supabase
+        .from("promotions")
+        .update({ usage_count: Number(promo.usage_count || 0) + 1, updated_at: new Date().toISOString() })
+        .eq("id", promo.id);
+    }
+  }
+
+  // 7. Update cart to converted
+  if (order.email) {
+    await supabase
+      .from("carts")
+      .update({ status: "converted", checkout_step: "completed", last_activity_at: new Date().toISOString() })
+      .eq("email", order.email)
+      .neq("status", "converted");
+  }
+
+  // 8. Send confirmation email and WhatsApp
+  await Promise.allSettled([
+    sendOrderConfirmation(order),
+    sendWhatsAppOrderConfirmationByOrderId(order.id),
+  ]);
+
+  return order;
 }
 
 export async function lookupOrder(orderNumberValue: string, email: string) {
@@ -161,7 +380,7 @@ export async function adminDashboardData(days = 30) {
   const supabase = getSupabaseAdmin();
   const since = new Date(Date.now() - Math.max(1, Math.min(days, 90)) * 86_400_000).toISOString();
   const [ordersResult, productsResult, cartsResult, eventsResult, lowStockResult] = await Promise.all([
-    supabase.from("orders").select("id,order_number,email,status,payment_status,fulfillment_status,total_inr,placed_at").gte("placed_at", since).order("placed_at", { ascending: false }).limit(5000),
+    supabase.from("orders").select("id,order_number,email,status,payment_status,payment_method,fulfillment_status,total_inr,placed_at").gte("placed_at", since).order("placed_at", { ascending: false }).limit(5000),
     supabase.from("products").select("id,name,slug,status,price_inr,compare_at_price_inr,hero_image_url,tags,is_best_seller,is_new_arrival,is_featured,updated_at,product_variants(inventory_quantity),product_categories(categories(name))").order("updated_at", { ascending: false }).limit(200),
     supabase.from("carts").select("id,anonymous_token,email,phone,status,last_activity_at,cart_items(quantity,products(price_inr))").gte("last_activity_at", since).order("last_activity_at", { ascending: false }).limit(5000),
     supabase.from("commerce_events").select("anonymous_id,event_name,created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(10000),
@@ -171,7 +390,15 @@ export async function adminDashboardData(days = 30) {
   const orders = (ordersResult.data || []) as Record<string, unknown>[];
   const carts = (cartsResult.data || []) as Record<string, unknown>[];
   const events = (eventsResult.data || []) as Record<string, unknown>[];
-  const validOrders = orders.filter((order) => !["cancelled", "refunded"].includes(String(order.status)));
+  const isConfirmedOrder = (order: Record<string, unknown>) => {
+    const status = String(order.status || "");
+    const paymentStatus = String(order.payment_status || "");
+    const paymentMethod = String(order.payment_method || "");
+    if (["cancelled", "refunded", "pending_payment"].includes(status)) return false;
+    if (paymentMethod === "razorpay" && paymentStatus !== "paid") return false;
+    return true;
+  };
+  const validOrders = orders.filter(isConfirmedOrder);
   const revenue = validOrders.reduce((sum, order) => sum + Number(order.total_inr || 0), 0);
   const cartValue = (cart: Record<string, unknown>) => ((cart.cart_items || []) as Record<string, unknown>[]).reduce((sum, item) => {
     const product = item.products as Record<string, unknown> | null;
@@ -205,7 +432,7 @@ export async function adminDashboardData(days = 30) {
   return {
     ...empty,
     configured: true,
-    orders: orders.slice(0, 8),
+    orders: validOrders.slice(0, 8),
     products: (productsResult.data || []) as Record<string, unknown>[],
     revenue,
     orderCount: validOrders.length,

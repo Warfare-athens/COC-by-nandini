@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
 import { commerceConfigured, getSupabaseAdmin } from "@/db";
@@ -12,6 +14,7 @@ const productSchema = z.object({
   images: z.array(z.object({ url: z.string().url(), altText: z.string().optional() })).max(12).default([]),
   material: z.string().optional(), careInstructions: z.string().optional(), styleNotes: z.string().optional(), tags: z.array(z.string()).default([]),
   seoTitle: z.string().optional(), seoDescription: z.string().optional(), searchKeywords: z.array(z.string()).default([]), aiGenerated: z.boolean().default(false),
+  taxRate: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -31,6 +34,7 @@ export async function POST(request: Request) {
     const { data: product, error } = await supabase.from("products").insert({
       name: input.name, slug: input.slug, sku: input.sku, short_description: input.shortDescription || null, description: input.description || null,
       hero_image_url: input.heroImageUrl, price_inr: input.priceInr, compare_at_price_inr: input.compareAtPriceInr || null,
+      tax_rate: input.taxRate || (input.priceInr > 2500 ? "18.00" : "5.00"),
       status: productStatus, is_best_seller: input.isBestSeller, is_new_arrival: input.isNewArrival, is_featured: input.isFeatured,
       material: input.material || null, care_instructions: input.careInstructions || null, style_notes: input.styleNotes || null, tags: input.tags,
       seo_title: input.seoTitle || null, seo_description: input.seoDescription || null, search_keywords: input.searchKeywords.join(", ") || null,

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
 import { uploadProductImage } from "@/lib/cloudinary";

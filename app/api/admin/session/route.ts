@@ -25,7 +25,10 @@ function recordFailure(address: string) {
   attempts.set(address, { ...current, count: current.count + 1 });
 }
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
+  console.log(">>> POST /api/admin/session CALLED! <<<");
   const address = clientAddress(request);
   if (blocked(address)) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
   let key = "";

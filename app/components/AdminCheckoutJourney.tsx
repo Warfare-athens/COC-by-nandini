@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import AdminShell from "./AdminShell";
 import { AdminRecordAction } from "./AdminModuleActions";
 import AdminLiveRefresh from "./AdminLiveRefresh";
+import WhatsAppRecoveryAction from "./WhatsAppRecoveryAction";
 import { getSupabaseAdmin } from "@/db";
 
 type Row = Record<string, unknown>;
@@ -69,9 +69,14 @@ export default async function AdminCheckoutJourney({ cartId, backHref, backLabel
   const checkoutFields: [string, unknown][] = [["Full name",cart.full_name],["Email",cart.email],["Phone",cart.phone],["Address",cart.line1],["Apartment",cart.line2],["City",cart.city],["State",cart.state],["PIN code",cart.postal_code],["Country",cart.country],["Payment",cart.payment_method]];
   const phone = value(cart.phone, "");
   const email = value(cart.email, "");
+  const recoveryItems = items.map((item) => {
+    const productRelation = item.products as Row | Row[] | null;
+    const product = Array.isArray(productRelation) ? productRelation[0] : productRelation;
+    return { name: value(product?.name, ""), quantity: Number(item.quantity || 1) };
+  });
 
-  return <AdminShell>
-    <div className="admin-head"><div><a className="admin-back-link" href={backHref}>← {backLabel}</a><h1>{value(cart.full_name, "Anonymous checkout")}</h1><p>{value(cart.email)} · {value(cart.phone)}</p></div><div className="admin-journey-head-actions"><AdminLiveRefresh/>{purchase&&<a className="admin-button" href={`/admin/orders/${value(purchase.order_id)}`}>Open order</a>}<AdminRecordAction module="carts" id={cartId} current={value(cart.status)} options={["active","contacted","recovered","abandoned","closed"]}/></div></div>
+  return <>
+    <div className="admin-head"><div><a className="admin-back-link" href={backHref}>← {backLabel}</a><h1>{value(cart.full_name, "Anonymous checkout")}</h1><p>{value(cart.email)} · {value(cart.phone)}</p></div><div className="admin-journey-head-actions"><AdminLiveRefresh/>{phone && <WhatsAppRecoveryAction cartId={cartId} phone={phone} customerName={value(cart.full_name, "")} items={recoveryItems} currentStatus={value(cart.status)} variant="compact"/>}{purchase&&<a className="admin-button" href={`/admin/orders/${value(purchase.order_id)}`}>Open order</a>}<AdminRecordAction module="carts" id={cartId} current={value(cart.status)} options={["active","contacted","recovered","abandoned","closed"]}/></div></div>
     <div className="admin-kpis"><div className="admin-kpi"><small>Checkout completion</small><strong>{completion}%</strong></div><div className="admin-kpi"><small>Cart value</small><strong>{money(totalValue)}</strong></div><div className="admin-kpi"><small>Journey events</small><strong>{events.length}</strong></div><div className="admin-kpi"><small>Current stage</small><strong>{value(cart.checkout_step, "cart")}</strong></div></div>
     <div className="admin-detail-grid admin-journey-grid">
       <section>
@@ -84,8 +89,8 @@ export default async function AdminCheckoutJourney({ cartId, backHref, backLabel
       <aside>
         <div className="admin-panel" style={{margin:0}}><div className="admin-panel-head"><h2>Acquisition source</h2></div><div className="admin-summary-list"><div><span>Source</span><b>{value(cart.source,"direct")}</b></div><div><span>Medium</span><b>{value(cart.medium,"none")}</b></div><div><span>Campaign</span><b>{value(cart.campaign,"none")}</b></div><div><span>Device</span><b>{value(cart.device)}</b></div><div><span>Landing page</span><b>{value(cart.landing_page || firstEvent?.path)}</b></div><div><span>Referrer</span><b className="admin-break-value">{value(cart.referrer,"Direct visit")}</b></div></div></div>
         <div className="admin-panel"><div className="admin-panel-head"><h2>Journey summary</h2></div><div className="admin-summary-list"><div><span>First seen</span><b>{date(firstEvent?.created_at || cart.created_at)}</b></div><div><span>Last active</span><b>{date(cart.last_activity_at)}</b></div><div><span>Page views</span><b>{pageViews.length}</b></div><div><span>Product views</span><b>{productViews.length}</b></div><div><span>Add-to-cart actions</span><b>{adds.length}</b></div><div><span>Checkout errors</span><b>{failures.length}</b></div></div></div>
-        <div className="admin-panel"><div className="admin-panel-head"><h2>Contact customer</h2></div><div className="admin-contact-actions">{phone&&<a href={`https://wa.me/91${phone.replace(/\D/g,"").slice(-10)}`} target="_blank">WhatsApp</a>}{phone&&<a href={`tel:${phone.replace(/[^\d+]/g,"")}`}>Call</a>}{email&&<a href={`mailto:${email}`}>Email</a>}</div></div>
+        <div className="admin-panel"><div className="admin-panel-head"><h2>Contact customer</h2></div><div style={{ padding: "18px" }}><WhatsAppRecoveryAction cartId={cartId} phone={phone} customerName={value(cart.full_name, "")} items={recoveryItems} currentStatus={value(cart.status)} variant="journey"/><div className="admin-contact-actions" style={{ padding: "12px 0 0", borderTop: "1px solid #efded5" }}>{phone&&<a href={`tel:${phone.replace(/[^\d+]/g,"")}`}>Call</a>}{email&&<a href={`mailto:${email}`}>Email</a>}</div></div></div>
       </aside>
     </div>
-  </AdminShell>;
+  </>;
 }

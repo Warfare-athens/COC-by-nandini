@@ -3,7 +3,7 @@ import CustomerPage, { customerPageStyles as styles } from "@/app/components/Cus
 
 export const metadata: Metadata = { title: "Women’s Clothing Size Guide", description: "Use the Carnival of Clothes women’s size chart and measurement guide to choose your best fit.", alternates: { canonical: "/size-guide" } };
 
-const sizes = [["XS","32","25","35"],["S","34","27","37"],["M","36","29","39"],["L","38","31","41"],["XL","40","33","43"],["XXL","42","35","45"]];
+const sizes = [["XS","32","25","35"],["S","34","27","37"],["M","36","29","39"],["L","38","31","41"],["XL","40","33","43"],["XXL","42","35","45"],["3XL","44","37","47"],["4XL","46","39","49"]];
 
 export default function SizeGuidePage() {
   return <CustomerPage eyebrow="FIND YOUR FIT" title="Women’s size guide" intro="Measure your body, compare the numbers below and check the individual product description for fit-specific guidance. Measurements are in inches.">
