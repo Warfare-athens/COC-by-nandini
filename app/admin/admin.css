@@ -1770,3 +1770,460 @@
   font-size: 11px;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Admin Product Delete & Action System                                       */
+/* -------------------------------------------------------------------------- */
+
+.admin-button-danger {
+  border-color: #e5a49f !important;
+  background: #fdf2f1 !important;
+  color: #b53830 !important;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.admin-button-danger:hover:not(:disabled) {
+  background: #b53830 !important;
+  border-color: #b53830 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(181, 56, 48, 0.2);
+}
+.admin-button-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-editor-save {
+  justify-content: space-between !important;
+}
+
+.admin-editor-save-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .admin-editor-save {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .admin-editor-save-right {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+/* Catalog Card Media & Delete Actions */
+.admin-product-card-media-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-product-card-media-wrap .admin-product-card-image {
+  position: relative;
+  display: block;
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  background: #eef0f2;
+}
+
+.admin-product-card-media-wrap .admin-product-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.admin-product-card:hover .admin-product-card-media-wrap img {
+  transform: scale(1.02);
+}
+
+.admin-product-quick-delete-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(229, 164, 159, 0.6);
+  background: rgba(255, 255, 255, 0.94);
+  color: #a44840;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  opacity: 0.85;
+  transition: all 0.18s ease;
+}
+
+.admin-product-card:hover .admin-product-quick-delete-btn {
+  opacity: 1;
+}
+
+.admin-product-quick-delete-btn:hover {
+  background: #b53830;
+  border-color: #b53830;
+  color: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(181, 56, 48, 0.25);
+}
+
+.admin-product-name-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  margin-top: 4px;
+}
+
+.admin-product-name-link:hover .admin-product-name {
+  color: var(--admin-accent-dark);
+}
+
+/* Product Card Footer Actions */
+.admin-product-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.admin-product-pricing-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-product-pricing-block b {
+  color: var(--admin-text);
+  font-size: 13px;
+}
+
+.admin-product-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-card-action-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #f4f5f6;
+  border: 1px solid #e1e3e5;
+  color: #3b424d;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all 0.15s ease;
+}
+
+.admin-card-action-link:hover {
+  background: var(--admin-accent-dark);
+  border-color: var(--admin-accent-dark);
+  color: #ffffff;
+}
+
+.admin-card-action-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #fdf2f1;
+  border: 1px solid #f2cfcb;
+  color: #b53830;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all 0.15s ease;
+}
+
+.admin-card-action-delete:hover {
+  background: #b53830;
+  border-color: #b53830;
+  color: #ffffff;
+}
+
+/* Notice for deletion */
+.admin-product-delete-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  border-color: #c9e2cf;
+  background: #f0f9f2;
+  color: #2e663a;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.admin-notice-dismiss {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+.admin-notice-dismiss:hover {
+  opacity: 1;
+}
+
+/* Delete Product Confirmation Modal */
+.admin-modal-fade-in {
+  animation: adminModalFadeIn 0.18s ease-out;
+}
+
+@keyframes adminModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.admin-delete-modal {
+  width: min(480px, 94vw);
+  margin: 0 auto;
+  border-radius: 14px;
+  border: 1px solid var(--admin-border-strong);
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(25, 27, 32, 0.22);
+  overflow: hidden;
+  animation: adminModalSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes adminModalSlide {
+  from {
+    transform: translateY(16px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.admin-delete-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-delete-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-delete-modal-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fdf0ee;
+  border: 1px solid #f6cfca;
+  color: #b53830;
+}
+
+.admin-delete-modal-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f242d;
+  line-height: 1.2;
+}
+
+.admin-delete-modal-head p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--admin-text-muted);
+}
+
+.admin-delete-modal-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.admin-delete-modal-close:hover:not(:disabled) {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.admin-delete-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-delete-product-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--admin-border);
+  background: #fafafb;
+}
+
+.admin-delete-product-thumb {
+  width: 52px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #eee;
+  flex-shrink: 0;
+}
+
+.admin-delete-product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-delete-product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-delete-product-cat {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--admin-text-muted);
+}
+
+.admin-delete-product-info strong {
+  font-size: 14px;
+  color: var(--admin-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-delete-product-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #313744;
+}
+
+.admin-delete-warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fff8f0;
+  border: 1px solid #fedec0;
+  color: #9c4f1a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-delete-warning-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #d97706;
+}
+
+.admin-delete-warning-box p {
+  margin: 0;
+}
+
+.admin-delete-error-box {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fdf2f1;
+  border: 1px solid #f2cfcb;
+  color: #b53830;
+  font-size: 12px;
+}
+
+.admin-delete-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--admin-border);
+  background: #fafafb;
+}
+
+.admin-delete-btn-cancel {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border-strong);
+  background: #ffffff;
+  color: var(--admin-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.admin-delete-btn-cancel:hover:not(:disabled) {
+  background: #f4f5f6;
+}
+
+.admin-delete-btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1px solid #b53830;
+  background: #b53830;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(181, 56, 48, 0.2);
+}
+.admin-delete-btn-confirm:hover:not(:disabled) {
+  background: #962821;
+  border-color: #962821;
+  box-shadow: 0 6px 16px rgba(181, 56, 48, 0.3);
+}
+.admin-delete-btn-confirm:disabled,
+.admin-delete-btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-spin {
+  animation: adminSpin 0.75s linear infinite;
+}
+
+@keyframes adminSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+

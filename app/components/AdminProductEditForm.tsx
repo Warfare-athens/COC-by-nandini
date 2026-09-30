@@ -2,10 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { showGlobalStatus } from "@/app/global-status";
 import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, publicTags, tagValue, taxonomyTag } from "@/lib/product-taxonomy";
 import UniversalSelect from "./UniversalSelect";
 import AdminGstPriceHelper from "./AdminGstPriceHelper";
+import AdminDeleteProductModal from "./AdminDeleteProductModal";
 
 type Variant = {
   id?: string;
@@ -94,6 +96,7 @@ export default function AdminProductEditForm({
   );
   const [editPrice, setEditPrice] = useState(String(product.price_inr || ""));
   const [editTaxRate, setEditTaxRate] = useState(String(product.tax_rate || (product.price_inr > 2500 ? "18" : "5")));
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const updateVariant = (
     index: number,
@@ -613,13 +616,42 @@ export default function AdminProductEditForm({
       {notice && <div className="admin-notice">{notice}</div>}
       {error && <div className="admin-error">{error}</div>}
       <div className="admin-editor-save">
-        <button className="admin-button" disabled={busy}>
-          {busy ? "Saving…" : "Save all changes"}
+        <button
+          type="button"
+          className="admin-button admin-button-danger"
+          onClick={() => setShowDeleteModal(true)}
+          disabled={busy}
+          title={`Delete ${product.name}`}
+        >
+          <Trash2 size={15} />
+          <span>Delete product</span>
         </button>
-        <a href={`/product/${product.slug}`} target="_blank">
-          View product
-        </a>
+        <div className="admin-editor-save-right">
+          <a href={`/product/${product.slug}`} target="_blank" rel="noreferrer">
+            View product
+          </a>
+          <button className="admin-button" disabled={busy}>
+            {busy ? "Saving…" : "Save all changes"}
+          </button>
+        </div>
       </div>
+
+      <AdminDeleteProductModal
+        isOpen={showDeleteModal}
+        product={{
+          id: product.id,
+          name: product.name,
+          price: product.price_inr,
+          category: category || undefined,
+          heroImageUrl: product.hero_image_url,
+        }}
+        onClose={() => setShowDeleteModal(false)}
+        onSuccess={() => {
+          setShowDeleteModal(false);
+          router.push("/admin/products");
+          router.refresh();
+        }}
+      />
     </form>
   );
 }

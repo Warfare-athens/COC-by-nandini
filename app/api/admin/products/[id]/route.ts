@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/admin-auth";
-import { getSupabaseAdmin } from "@/db";
+import { getSupabaseAdmin, commerceConfigured } from "@/db";
 
 const variantSchema = z.object({
   id: z.string().uuid().optional(),
@@ -180,3 +180,88 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!(await isAdmin()))
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!commerceConfigured())
+    return NextResponse.json(
+      { error: "Connect Supabase to manage products." },
+      { status: 503 },
+    );
+
+  try {
+    const { id } = await params;
+    const supabase = getSupabaseAdmin();
+
+    // 1. Fetch product to verify it exists and retain name for audit log
+    const { data: product, error: fetchError } = await supabase
+      .from("products")
+      .select("id, name, slug")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!product) {
+      return NextResponse.json(
+        { error: "Product not found or already deleted." },
+        { status: 404 },
+      );
+    }
+
+    // 2. Disconnect foreign key references:
+    // Historic orders keep their line items with nullified product_id / variant_id
+    await supabase
+      .from("order_items")
+      .update({ product_id: null, variant_id: null })
+      .eq("product_id", id);
+
+    // Active customer cart items referencing this deleted product are removed
+    await supabase.from("cart_items").delete().eq("product_id", id);
+
+    // Associated stock alerts, reviews, taxonomy categories, gallery images, variants
+    await supabase.from("stock_requests").delete().eq("product_id", id);
+    await supabase.from("product_reviews").delete().eq("product_id", id);
+    await supabase.from("product_categories").delete().eq("product_id", id);
+    await supabase.from("product_images").delete().eq("product_id", id);
+    await supabase.from("product_variants").delete().eq("product_id", id);
+
+    // 3. Delete product row
+    const { error: deleteError } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) throw deleteError;
+
+    // 4. Log audit trail
+    await supabase.from("audit_logs").insert({
+      actor: "admin",
+      action: "product.deleted",
+      entity_type: "product",
+      entity_id: id,
+      metadata: {
+        name: product.name,
+        slug: product.slug,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Product "${product.name}" has been permanently deleted.`,
+      id,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Unable to delete product.",
+      },
+      { status: 400 },
+    );
+  }
+}
+
