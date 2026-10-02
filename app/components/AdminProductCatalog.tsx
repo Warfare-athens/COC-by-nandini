@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import UniversalSelect from "./UniversalSelect";
 import AdminDeleteProductModal, { DeleteModalProduct } from "./AdminDeleteProductModal";
@@ -19,6 +20,7 @@ export type AdminCatalogProduct = {
 };
 
 export default function AdminProductCatalog({ products }: { products: AdminCatalogProduct[] }) {
+  const router = useRouter();
   const [productList, setProductList] = useState<AdminCatalogProduct[]>(products);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
@@ -59,6 +61,11 @@ export default function AdminProductCatalog({ products }: { products: AdminCatal
     setProductList((current) => current.filter((p) => p.id !== deleted.id));
     setProductToDelete(null);
     setDeleteNotice(`Product "${deleted.name}" has been deleted.`);
+    try {
+      router.refresh();
+    } catch {
+      // non-blocking
+    }
     setTimeout(() => setDeleteNotice(null), 5000);
   };
 

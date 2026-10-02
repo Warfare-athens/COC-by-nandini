@@ -212,24 +212,54 @@ export async function DELETE(
       );
     }
 
-    // 2. Disconnect foreign key references:
-    // Historic orders keep their line items with nullified product_id / variant_id
+    // 2. Query all variant IDs belonging to this product to clean up dependent child tables
+    const { data: variants } = await supabase
+      .from("product_variants")
+      .select("id")
+      .eq("product_id", id);
+
+    const variantIds = (variants || []).map((v) => v.id);
+
+    // 3. Remove inventory movements tracking for these variants (blocks variant deletion)
+    if (variantIds.length > 0) {
+      await supabase
+        .from("inventory_movements")
+        .delete()
+        .in("variant_id", variantIds);
+    }
+
+    // 4. Safely detach historic order items: keep item details, nullify FKs
     await supabase
       .from("order_items")
       .update({ product_id: null, variant_id: null })
       .eq("product_id", id);
 
-    // Active customer cart items referencing this deleted product are removed
-    await supabase.from("cart_items").delete().eq("product_id", id);
+    if (variantIds.length > 0) {
+      await supabase
+        .from("order_items")
+        .update({ variant_id: null })
+        .in("variant_id", variantIds);
+    }
 
-    // Associated stock alerts, reviews, taxonomy categories, gallery images, variants
+    // 5. Clear cart items
+    await supabase.from("cart_items").delete().eq("product_id", id);
+    if (variantIds.length > 0) {
+      await supabase.from("cart_items").delete().in("variant_id", variantIds);
+    }
+
+    // 6. Clear customer stock back-in-stock alerts
     await supabase.from("stock_requests").delete().eq("product_id", id);
+    if (variantIds.length > 0) {
+      await supabase.from("stock_requests").delete().in("variant_id", variantIds);
+    }
+
+    // 7. Clear reviews, categories, images, and variants
     await supabase.from("product_reviews").delete().eq("product_id", id);
     await supabase.from("product_categories").delete().eq("product_id", id);
     await supabase.from("product_images").delete().eq("product_id", id);
     await supabase.from("product_variants").delete().eq("product_id", id);
 
-    // 3. Delete product row
+    // 8. Delete product row
     const { error: deleteError } = await supabase
       .from("products")
       .delete()
