@@ -4,7 +4,8 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { showGlobalStatus } from "@/app/global-status";
-import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, publicTags, tagValue, taxonomyTag } from "@/lib/product-taxonomy";
+import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, publicTags, tagValue, tagValues, taxonomyTag } from "@/lib/product-taxonomy";
+import { POPULAR_PRODUCT_COLORS, getColorSwatch, detectColorFromName } from "@/lib/colors";
 import UniversalSelect from "./UniversalSelect";
 import AdminGstPriceHelper from "./AdminGstPriceHelper";
 import AdminDeleteProductModal from "./AdminDeleteProductModal";
@@ -97,6 +98,34 @@ export default function AdminProductEditForm({
   const [editPrice, setEditPrice] = useState(String(product.price_inr || ""));
   const [editTaxRate, setEditTaxRate] = useState(String(product.tax_rate || (product.price_inr > 2500 ? "18" : "5")));
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const initialColors = Array.from(
+    new Set([
+      ...tagValues(product.tags, "color"),
+      ...(product.product_variants || [])
+        .map((v) => v.color)
+        .filter((c): c is string => Boolean(c && c.trim())),
+    ])
+  );
+  const [colors, setColors] = useState<string[]>(initialColors);
+  const [customColor, setCustomColor] = useState("");
+
+  const toggleColor = (colorToToggle: string) => {
+    const trimmed = colorToToggle.trim();
+    if (!trimmed) return;
+    const exists = colors.some(
+      (c) => c.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      setColors((prev) => prev.filter((c) => c.toLowerCase() !== trimmed.toLowerCase()));
+    } else {
+      setColors((prev) => [...prev, trimmed]);
+    }
+  };
+
+  const removeColor = (colorToRemove: string) => {
+    setColors((prev) => prev.filter((c) => c.toLowerCase() !== colorToRemove.toLowerCase()));
+  };
 
   const updateVariant = (
     index: number,
@@ -236,10 +265,11 @@ export default function AdminProductEditForm({
         ...String(form.get("tags") || "")
         .split(",")
         .map((value) => value.trim())
-        .filter(Boolean),
+        .filter((tag) => Boolean(tag) && !/^(category|subcategory|occasion|color):/.test(tag)),
         ...(category ? [taxonomyTag("category", category)] : []),
         ...(subcategory ? [taxonomyTag("subcategory", subcategory)] : []),
         ...occasions.map((value) => taxonomyTag("occasion", value)),
+        ...colors.map((color) => taxonomyTag("color", color)),
       ],
       seo_title: text(form, "seo_title"),
       seo_description: text(form, "seo_description"),
@@ -250,7 +280,7 @@ export default function AdminProductEditForm({
       variants: variants.map((variant) => ({
         ...variant,
         size: variant.size || null,
-        color: variant.color || null,
+        color: variant.color || (colors.length > 0 ? colors[0] : null),
         price_inr: variant.price_inr || null,
         compare_at_price_inr: variant.compare_at_price_inr || null,
       })),
@@ -540,6 +570,132 @@ export default function AdminProductEditForm({
           <div className="admin-field">
             <label>Tags</label>
             <input name="tags" defaultValue={publicTags(product.tags).join(", ")} />
+          </div>
+          <div className="admin-field full">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label style={{ margin: 0 }}>Colours & Shades</label>
+              {product.name && (
+                <button
+                  type="button"
+                  style={{
+                    background: "none",
+                    border: "1px solid #ebdcd0",
+                    borderRadius: "6px",
+                    padding: "3px 8px",
+                    fontSize: "11px",
+                    color: "#bb7068",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                  onClick={() => {
+                    const detected = detectColorFromName(product.name);
+                    if (detected.length) {
+                      const merged = Array.from(new Set([...colors, ...detected]));
+                      setColors(merged);
+                      showGlobalStatus(`Detected: ${detected.join(", ")}`, "success", 3000);
+                    } else {
+                      showGlobalStatus("No known color found in product name", "info", 3000);
+                    }
+                  }}
+                >
+                  Auto-detect from Title
+                </button>
+              )}
+            </div>
+
+            <div className="admin-colors-container">
+              <div className="admin-selected-colors">
+                {colors.length > 0 ? (
+                  colors.map((color) => {
+                    const swatch = getColorSwatch(color);
+                    return (
+                      <span key={color} className="admin-color-tag">
+                        <span
+                          className="admin-color-swatch-dot"
+                          style={{
+                            background: swatch.bg,
+                            border: swatch.border ? `1px solid ${swatch.border}` : "none",
+                          }}
+                        />
+                        {color}
+                        <button
+                          type="button"
+                          onClick={() => removeColor(color)}
+                          title={`Remove ${color}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span className="admin-no-colors-hint">
+                    No colours selected. Pick from popular shades below or add a custom shade.
+                  </span>
+                )}
+              </div>
+
+              <div className="admin-custom-color-row">
+                <input
+                  type="text"
+                  value={customColor}
+                  onChange={(e) => setCustomColor(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (customColor.trim()) {
+                        toggleColor(customColor.trim());
+                        setCustomColor("");
+                      }
+                    }
+                  }}
+                  placeholder="Add custom colour (e.g. Wine, Dusty Rose, Champagne, Rust)..."
+                />
+                <button
+                  type="button"
+                  className="admin-editor-action"
+                  onClick={() => {
+                    if (customColor.trim()) {
+                      toggleColor(customColor.trim());
+                      setCustomColor("");
+                    }
+                  }}
+                >
+                  + Add Shade
+                </button>
+              </div>
+
+              <div className="admin-quick-colors">
+                <small>Quick Pick Boutique Shades</small>
+                <div className="admin-color-swatches-grid">
+                  {POPULAR_PRODUCT_COLORS.map((item) => {
+                    const isSelected = colors.some(
+                      (c) => c.toLowerCase() === item.name.toLowerCase()
+                    );
+                    return (
+                      <button
+                        key={item.name}
+                        type="button"
+                        className={`admin-swatch-pill ${isSelected ? "selected" : ""}`}
+                        onClick={() => toggleColor(item.name)}
+                        title={item.name}
+                      >
+                        <span
+                          className="admin-color-swatch-dot"
+                          style={{
+                            width: "10px",
+                            height: "10px",
+                            background: item.hex,
+                            border: item.border ? `1px solid ${item.border}` : "none",
+                          }}
+                        />
+                        <span>{item.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
           <div className="admin-field full">
             <label>Care instructions</label>

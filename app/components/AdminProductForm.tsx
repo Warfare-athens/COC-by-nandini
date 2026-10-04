@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, taxonomyTag } from "@/lib/product-taxonomy";
+import { POPULAR_PRODUCT_COLORS, getColorSwatch, detectColorFromName } from "@/lib/colors";
 import { showGlobalStatus } from "@/app/global-status";
 import UniversalSelect from "./UniversalSelect";
 import AdminGstPriceHelper from "./AdminGstPriceHelper";
@@ -68,6 +69,7 @@ export default function AdminProductForm() {
   const [draftReady, setDraftReady] = useState(false);
   const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
   const [compareAtPrice, setCompareAtPrice] = useState("");
+  const [customColor, setCustomColor] = useState("");
   const [isBestSeller, setIsBestSeller] = useState(false);
   const [isNewArrival, setIsNewArrival] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
@@ -85,6 +87,7 @@ export default function AdminProductForm() {
     setSizeInventory(DEFAULT_SIZES_UP_TO_4XL.map((size) => ({ size, quantity: 0 })));
     setAiGenerated(false);
     setCompareAtPrice("");
+    setCustomColor("");
     setIsBestSeller(false);
     setIsNewArrival(false);
     setIsFeatured(false);
@@ -205,6 +208,33 @@ export default function AdminProductForm() {
   const update = (field: keyof GeneratedFields, value: string | string[]) =>
     setGenerated((current) => ({ ...current, [field]: value }));
 
+  const toggleColor = (colorToToggle: string) => {
+    const trimmed = colorToToggle.trim();
+    if (!trimmed) return;
+    const exists = generated.colors.some(
+      (c) => c.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      update(
+        "colors",
+        generated.colors.filter(
+          (c) => c.toLowerCase() !== trimmed.toLowerCase()
+        )
+      );
+    } else {
+      update("colors", [...generated.colors, trimmed]);
+    }
+  };
+
+  const removeColor = (colorToRemove: string) => {
+    update(
+      "colors",
+      generated.colors.filter(
+        (c) => c.toLowerCase() !== colorToRemove.toLowerCase()
+      )
+    );
+  };
+
   const upload = async (files: FileList) => {
     const selected = Array.from(files).slice(0, Math.max(0, 8 - images.length));
     if (!selected.length) return;
@@ -315,6 +345,7 @@ export default function AdminProductForm() {
 
     const isApparel = category !== "Accessories";
     const sizes = isApparel ? DEFAULT_SIZES_UP_TO_4XL : ["One Size"];
+    const detectedColors = cleanName ? detectColorFromName(cleanName) : [];
 
     setGenerated({
       slug,
@@ -327,7 +358,7 @@ export default function AdminProductForm() {
       subcategory,
       occasions: ["Everyday"],
       tags: [category.toLowerCase(), "carnival-edit", "trending"],
-      colors: ["Multi"],
+      colors: detectedColors.length ? detectedColors : ["Multi"],
       suggestedSizes: sizes,
       material: "Premium Quality Fabric",
       careInstructions: "Dry clean or gentle hand wash in cold water with mild detergent. Do not bleach. Dry in shade.",
@@ -372,7 +403,14 @@ export default function AdminProductForm() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
-      setGenerated(data.product);
+      const productData = { ...data.product };
+      if (!productData.colors || productData.colors.length === 0) {
+        const detected = detectColorFromName(name);
+        if (detected.length > 0) {
+          productData.colors = detected;
+        }
+      }
+      setGenerated(productData);
       const isApparel = data.product.category !== "Accessories";
       const rawSizes = data.product.suggestedSizes || [];
       const hasStandardSizes = rawSizes.some((s: string) => ["XS", "S", "M", "L", "XL"].includes(s.toUpperCase()));
@@ -464,13 +502,15 @@ export default function AdminProductForm() {
           generated.imageAltTexts[index] || generated.shortDescription || name,
       })),
       material: generated.material,
+      colors: generated.colors,
       careInstructions: generated.careInstructions,
       styleNotes: generated.styleNotes,
       tags: [
-        ...generated.tags.filter((tag) => !/^(category|subcategory|occasion):/.test(tag)),
+        ...generated.tags.filter((tag) => !/^(category|subcategory|occasion|color):/.test(tag)),
         taxonomyTag("category", generated.category),
         ...(generated.subcategory ? [taxonomyTag("subcategory", generated.subcategory)] : []),
         ...generated.occasions.map((value) => taxonomyTag("occasion", value)),
+        ...generated.colors.map((color) => taxonomyTag("color", color)),
       ],
       seoTitle: generated.seoTitle,
       seoDescription: generated.seoDescription,
@@ -818,20 +858,131 @@ export default function AdminProductForm() {
                 onChange={(event) => update("material", event.target.value)}
               />
             </div>
-            <div className="admin-field">
-              <label>Colours</label>
-              <input
-                value={generated.colors.join(", ")}
-                onChange={(event) =>
-                  update(
-                    "colors",
-                    event.target.value
-                      .split(",")
-                      .map((value) => value.trim())
-                      .filter(Boolean),
-                  )
-                }
-              />
+            <div className="admin-field full">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                <label style={{ margin: 0 }}>Colours & Shades</label>
+                {name.trim() && (
+                  <button
+                    type="button"
+                    style={{
+                      background: "none",
+                      border: "1px solid #ebdcd0",
+                      borderRadius: "6px",
+                      padding: "3px 8px",
+                      fontSize: "11px",
+                      color: "#bb7068",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                    onClick={() => {
+                      const detected = detectColorFromName(name);
+                      if (detected.length) {
+                        const merged = Array.from(new Set([...generated.colors, ...detected]));
+                        update("colors", merged);
+                        showGlobalStatus(`Detected: ${detected.join(", ")}`, "success", 3000);
+                      } else {
+                        showGlobalStatus("No known color found in product name", "info", 3000);
+                      }
+                    }}
+                  >
+                    Auto-detect from Title
+                  </button>
+                )}
+              </div>
+
+              <div className="admin-colors-container">
+                <div className="admin-selected-colors">
+                  {generated.colors.length > 0 ? (
+                    generated.colors.map((color) => {
+                      const swatch = getColorSwatch(color);
+                      return (
+                        <span key={color} className="admin-color-tag">
+                          <span
+                            className="admin-color-swatch-dot"
+                            style={{
+                              background: swatch.bg,
+                              border: swatch.border ? `1px solid ${swatch.border}` : "none",
+                            }}
+                          />
+                          {color}
+                          <button
+                            type="button"
+                            onClick={() => removeColor(color)}
+                            title={`Remove ${color}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="admin-no-colors-hint">
+                      No colours selected. Pick from popular shades below or add a custom shade.
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-custom-color-row">
+                  <input
+                    type="text"
+                    value={customColor}
+                    onChange={(e) => setCustomColor(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (customColor.trim()) {
+                          toggleColor(customColor.trim());
+                          setCustomColor("");
+                        }
+                      }
+                    }}
+                    placeholder="Add custom colour (e.g. Wine, Dusty Rose, Champagne, Rust)..."
+                  />
+                  <button
+                    type="button"
+                    className="admin-editor-action"
+                    onClick={() => {
+                      if (customColor.trim()) {
+                        toggleColor(customColor.trim());
+                        setCustomColor("");
+                      }
+                    }}
+                  >
+                    + Add Shade
+                  </button>
+                </div>
+
+                <div className="admin-quick-colors">
+                  <small>Quick Pick Boutique Shades</small>
+                  <div className="admin-color-swatches-grid">
+                    {POPULAR_PRODUCT_COLORS.map((item) => {
+                      const isSelected = generated.colors.some(
+                        (c) => c.toLowerCase() === item.name.toLowerCase()
+                      );
+                      return (
+                        <button
+                          key={item.name}
+                          type="button"
+                          className={`admin-swatch-pill ${isSelected ? "selected" : ""}`}
+                          onClick={() => toggleColor(item.name)}
+                          title={item.name}
+                        >
+                          <span
+                            className="admin-color-swatch-dot"
+                            style={{
+                              width: "10px",
+                              height: "10px",
+                              background: item.hex,
+                              border: item.border ? `1px solid ${item.border}` : "none",
+                            }}
+                          />
+                          <span>{item.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="admin-field full">
               <label>Care instructions</label>

@@ -10,8 +10,10 @@ export const PRODUCT_TAXONOMY = {
 
 export const PRODUCT_CATEGORIES = Object.keys(PRODUCT_TAXONOMY);
 export const OCCASIONS = ["Everyday", "Party Wear"] as const;
-export const taxonomyTag = (kind: "category" | "subcategory" | "occasion", value: string) => `${kind}:${value}`;
+export const taxonomyTag = (kind: "category" | "subcategory" | "occasion" | "color", value: string) => `${kind}:${value}`;
 export const tagValue = (tags: string[] | null | undefined, kind: string) =>
   (tags || []).find((tag) => tag.startsWith(`${kind}:`))?.slice(kind.length + 1) || "";
+export const tagValues = (tags: string[] | null | undefined, kind: string) =>
+  (tags || []).filter((tag) => tag.startsWith(`${kind}:`)).map((tag) => tag.slice(kind.length + 1));
 export const publicTags = (tags: string[] | null | undefined) =>
-  (tags || []).filter((tag) => !/^(category|subcategory|occasion):/.test(tag));
+  (tags || []).filter((tag) => !/^(category|subcategory|occasion|color):/.test(tag));

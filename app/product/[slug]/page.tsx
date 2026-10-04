@@ -5,7 +5,7 @@ import DynamicProductClient from "./DynamicProductClient";
 
 export const dynamic = "force-dynamic";
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.carnivalofclothes.com").replace(/\/$/, "");
-const productFields = "id,name,slug,short_description,description,brand,hero_image_url,price_inr,compare_at_price_inr,material,care_instructions,style_notes,seo_title,seo_description,sku,tags,is_new_arrival,is_best_seller,product_variants(id,size,title,sku,price_inr,inventory_quantity,is_active),product_images(id,url,alt_text,is_hero,sort_order)";
+const productFields = "id,name,slug,short_description,description,brand,hero_image_url,price_inr,compare_at_price_inr,material,care_instructions,style_notes,seo_title,seo_description,sku,tags,is_new_arrival,is_best_seller,product_variants(id,size,color,title,sku,price_inr,inventory_quantity,is_active),product_images(id,url,alt_text,is_hero,sort_order)";
 
 async function getProduct(slug: string) {
   if (!commerceConfigured()) return null;

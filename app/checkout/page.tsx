@@ -294,7 +294,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customer: { fullName, email, phone },
           address: { line1, line2, city, state, postalCode, country: "India" },
-          items: items.map((item) => ({ name: item.name, size: item.size, quantity: item.quantity })),
+          items: items.map((item) => ({ name: item.name, size: item.size, color: item.color, quantity: item.quantity })),
           paymentMethod: payment,
           cartToken: getCartToken(),
           couponCode: couponCode || undefined,
@@ -784,10 +784,15 @@ export default function CheckoutPage() {
                       >
                         {item.name}
                       </p>
-                      <div className="mt-1 flex items-center gap-1.5">
+                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                         <span className="rounded bg-[#f6ece5] px-1.5 py-0.5 text-[9.5px] font-medium text-[#7d675e]">
                           Size {item.size}
                         </span>
+                        {item.color && (
+                          <span className="rounded bg-[#f6ece5] px-1.5 py-0.5 text-[9.5px] font-medium text-[#7d675e]">
+                            {item.color}
+                          </span>
+                        )}
                         <span className="text-[10px] text-[#9c877f]">Qty: {item.quantity}</span>
                       </div>
                     </div>

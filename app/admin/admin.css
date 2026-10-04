@@ -2325,6 +2325,133 @@
   color: #7d5952 !important;
 }
 
+/* Admin Color Picker & Palette */
+.admin-colors-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fffdfb;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.admin-selected-colors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.admin-color-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #fbf0ea;
+  border: 1px solid #e8cdbc;
+  border-radius: 999px;
+  padding: 5px 12px 5px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #552d26;
+}
+
+.admin-color-tag button {
+  background: none;
+  border: none;
+  font-size: 15px;
+  line-height: 1;
+  color: #a44840;
+  cursor: pointer;
+  padding: 0 0 0 4px;
+}
+
+.admin-color-tag button:hover {
+  color: #7b1d16;
+}
+
+.admin-color-swatch-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.admin-no-colors-hint {
+  font-size: 11px;
+  color: #92756b;
+  font-style: italic;
+}
+
+.admin-quick-colors {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px dashed #ebdcd0;
+  padding-top: 10px;
+}
+
+.admin-quick-colors small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8c6a61;
+}
+
+.admin-color-swatches-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-swatch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid #ebdcd0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #6d544c;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-swatch-pill:hover {
+  background: #fbf2ec;
+  border-color: #bb7068;
+  color: #3a2926;
+}
+
+.admin-swatch-pill.selected {
+  background: #faece6;
+  border-color: #bb7068;
+  color: #7b3830;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(187, 112, 104, 0.18);
+}
+
+.admin-custom-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.admin-custom-color-row input {
+  flex: 1;
+  max-width: 320px;
+  padding: 7px 12px;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+
 
 
 

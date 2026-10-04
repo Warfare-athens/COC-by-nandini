@@ -7,10 +7,12 @@ import { showGlobalStatus } from "@/app/global-status";
 import { StockRequestForm } from "@/app/components/EngagementForms";
 import UniversalSelect from "@/app/components/UniversalSelect";
 import StickyMobileBuyBar from "@/app/components/StickyMobileBuyBar";
+import { getColorSwatch, extractProductColors } from "@/lib/colors";
 
 type Variant = {
   id: string;
   size: string | null;
+  color?: string | null;
   title: string;
   inventory_quantity: number;
   is_active: boolean;
@@ -45,6 +47,7 @@ type Product = {
   style_notes: string | null;
   is_new_arrival: boolean;
   is_best_seller: boolean;
+  tags?: string[] | null;
   product_variants: Variant[];
   product_images: Image[];
 };
@@ -56,6 +59,8 @@ export default function DynamicProductClient({
   product: Product;
   reviews: Review[];
 }) {
+  const availableColors = extractProductColors(product.tags, product.product_variants);
+  const [selectedColor, setSelectedColor] = useState(availableColors[0] || "");
   const variants = product.product_variants.filter(
     (variant) => variant.is_active,
   );
@@ -168,6 +173,7 @@ export default function DynamicProductClient({
       price: `₹${Number(product.price_inr).toLocaleString("en-IN")}`,
       img: mainImage,
       size,
+      color: selectedColor || undefined,
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
@@ -265,6 +271,39 @@ export default function DynamicProductClient({
           </div>
           <p className="tax">Inclusive of all taxes</p>
           <hr />
+          {availableColors.length > 0 && (
+            <div className="product-color-group">
+              <div className="select-head">
+                <b>
+                  Colour: <span className="color-active-title">{selectedColor || availableColors[0]}</span>
+                </b>
+              </div>
+              <div className="colors-flex">
+                {availableColors.map((colorName) => {
+                  const swatch = getColorSwatch(colorName);
+                  const isChosen = (selectedColor || availableColors[0]).toLowerCase() === colorName.toLowerCase();
+                  return (
+                    <button
+                      type="button"
+                      key={colorName}
+                      className={`color-chip-btn ${isChosen ? "chosen" : ""}`}
+                      onClick={() => setSelectedColor(colorName)}
+                      aria-label={`Select colour ${colorName}`}
+                    >
+                      <span
+                        className="color-chip-dot"
+                        style={{
+                          background: swatch.bg,
+                          border: swatch.border ? `1px solid ${swatch.border}` : "1px solid rgba(0,0,0,0.15)",
+                        }}
+                      />
+                      <span className="color-chip-text">{colorName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {displaySizeLabels.length > 0 ? (
             <>
               <div className="select-head">

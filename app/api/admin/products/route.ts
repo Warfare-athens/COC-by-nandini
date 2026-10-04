@@ -13,6 +13,7 @@ const productSchema = z.object({
   sizeInventory: z.array(z.object({ size: z.string().min(1), quantity: z.number().int().min(0) })).default([]),
   images: z.array(z.object({ url: z.string().url(), altText: z.string().optional() })).max(12).default([]),
   material: z.string().optional(), careInstructions: z.string().optional(), styleNotes: z.string().optional(), tags: z.array(z.string()).default([]),
+  colors: z.array(z.string()).default([]),
   seoTitle: z.string().optional(), seoDescription: z.string().optional(), searchKeywords: z.array(z.string()).default([]), aiGenerated: z.boolean().default(false),
   taxRate: z.string().optional(),
 });
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       inventoryRows.length && inventoryRows.some((row) => row.quantity > 0)
     );
     const productStatus = essentialsComplete ? "active" : "draft";
+    const primaryColor = input.colors[0] || null;
     const { data: product, error } = await supabase.from("products").insert({
       name: input.name, slug: input.slug, sku: input.sku, short_description: input.shortDescription || null, description: input.description || null,
       hero_image_url: input.heroImageUrl, price_inr: input.priceInr, compare_at_price_inr: input.compareAtPriceInr || null,
@@ -44,7 +46,12 @@ export async function POST(request: Request) {
     if (error) throw error;
     if (inventoryRows.length) {
       const { error: variantError } = await supabase.from("product_variants").insert(inventoryRows.map(({ size, quantity }) => ({
-        product_id: product.id, sku: `${input.sku}-${size.toUpperCase()}`, title: `Size ${size}`, size, inventory_quantity: quantity,
+        product_id: product.id,
+        sku: `${input.sku}-${size.toUpperCase()}`,
+        title: primaryColor ? `Size ${size} - ${primaryColor}` : `Size ${size}`,
+        size,
+        color: primaryColor,
+        inventory_quantity: quantity,
       })));
       if (variantError) throw variantError;
     }

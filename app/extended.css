@@ -62,3 +62,53 @@
 .detail-main{height:auto;aspect-ratio:auto;overflow:visible;border:0;padding:0}
 .detail-main img{display:block;width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;object-position:center top;border:1px solid var(--gold);border-radius:999px 999px 0 0;padding:5px}
 @media(max-width:800px){.breadcrumbs{scrollbar-width:none;-ms-overflow-style:none}.breadcrumbs::-webkit-scrollbar{display:none}.detail-main{height:auto;aspect-ratio:auto}.detail-main img{aspect-ratio:3/4}}
+
+/* Product Detail Color Selector */
+.product-color-group {
+  margin-bottom: 22px;
+}
+.color-active-title {
+  color: var(--rose);
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-left: 6px;
+}
+.colors-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.color-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid #cdb9ae;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4a3832;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.color-chip-btn:hover {
+  border-color: var(--rose);
+  background: #fdf6f2;
+  color: var(--rose);
+}
+.color-chip-btn.chosen {
+  border-color: var(--rose);
+  background: #fbf0ea;
+  color: var(--rose);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(187, 112, 104, 0.16);
+}
+.color-chip-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}

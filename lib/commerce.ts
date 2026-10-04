@@ -7,7 +7,7 @@ import { z } from "zod";
 export const checkoutSchema = z.object({
   customer: z.object({ fullName: z.string().min(2), email: z.string().email(), phone: z.string().min(8) }),
   address: z.object({ line1: z.string().min(4), line2: z.string().optional(), city: z.string().min(2), state: z.string().min(2), postalCode: z.string().min(4), country: z.string().default("India") }),
-  items: z.array(z.object({ name: z.string().min(1), size: z.string().min(1), quantity: z.number().int().min(1).max(10) })).min(1),
+  items: z.array(z.object({ name: z.string().min(1), size: z.string().min(1), color: z.string().optional(), quantity: z.number().int().min(1).max(10) })).min(1),
   paymentMethod: z.enum(["cod", "razorpay"]).default("cod"),
   couponCode: z.string().optional(), customerNote: z.string().max(500).optional(), cartToken: z.string().uuid().optional(),
 });
@@ -90,7 +90,7 @@ export async function createGuestOrder(input: CheckoutInput) {
     product_id: item.productId,
     variant_id: item.variantId,
     product_name: item.name,
-    variant_title: item.variantTitle || `Size ${item.size}`,
+    variant_title: item.variantTitle || `Size ${item.size}${item.color ? ` - ${item.color}` : ""}`,
     sku: item.sku,
     image_url: item.imageUrl,
     quantity: item.quantity,

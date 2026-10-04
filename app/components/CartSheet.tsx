@@ -266,7 +266,7 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
                     return (
                       <article
                         className="group grid grid-cols-[76px_1fr] gap-3.5 py-4 sm:grid-cols-[84px_1fr]"
-                        key={`${item.name}-${item.size}`}
+                        key={`${item.name}-${item.size}-${item.color || ""}`}
                       >
                         <div className="relative overflow-hidden rounded-lg border border-[#ebdcd0] bg-[#f8f2ec] shadow-2xs">
                           <img
@@ -285,15 +285,20 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
                               <button
                                 className="grid h-7 w-7 place-items-center rounded-md text-[#a38e85] transition hover:bg-[#faeae5] hover:text-[#b56560]"
                                 aria-label={`Remove ${item.name} from bag`}
-                                onClick={() => removeFromCart(item.name, item.size)}
+                                onClick={() => removeFromCart(item.name, item.size, item.color)}
                               >
                                 <Trash2 size={14} />
                               </button>
                             </div>
-                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                               <span className="rounded border border-[#ebdcd0] bg-[#faf2ec] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#8e524c]">
                                 Size {item.size}
                               </span>
+                              {item.color && (
+                                <span className="rounded border border-[#ebdcd0] bg-[#faf2ec] px-2 py-0.5 text-[10px] font-medium tracking-wide text-[#7d6056]">
+                                  {item.color}
+                                </span>
+                              )}
                               <span className="text-[11px] text-[#917d75]">Carnival Edit</span>
                             </div>
                           </div>
@@ -304,7 +309,7 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
                               <button
                                 className="grid h-7 w-7 place-items-center rounded-full text-[#7d675e] transition hover:bg-[#fff2ee] hover:text-[#b56560] active:scale-90"
                                 aria-label="Decrease quantity"
-                                onClick={() => updateQuantity(item.name, item.size, -1)}
+                                onClick={() => updateQuantity(item.name, item.size, -1, item.color)}
                               >
                                 <Minus size={11} strokeWidth={2.5} />
                               </button>
@@ -314,7 +319,7 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
                               <button
                                 className="grid h-7 w-7 place-items-center rounded-full text-[#7d675e] transition hover:bg-[#fff2ee] hover:text-[#b56560] active:scale-90"
                                 aria-label="Increase quantity"
-                                onClick={() => updateQuantity(item.name, item.size, 1)}
+                                onClick={() => updateQuantity(item.name, item.size, 1, item.color)}
                               >
                                 <Plus size={11} strokeWidth={2.5} />
                               </button>
