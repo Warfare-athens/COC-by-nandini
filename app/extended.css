@@ -65,55 +65,166 @@
 
 /* Product Detail Color Selector */
 .product-color-group {
-  margin-top: 18px;
-  margin-bottom: 8px;
+  margin-top: 20px;
+  margin-bottom: 14px;
 }
-.color-active-title {
-  color: var(--rose);
+.color-select-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.color-header-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.color-header-meta b {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3a2926;
+  font-weight: 700;
+}
+.color-active-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fbf2ec;
+  border: 1px solid #ead6cb;
+  padding: 3px 10px;
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(58, 41, 38, 0.05);
+  transition: all 0.2s ease;
+}
+.color-active-chip-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.color-active-chip-name {
+  font-size: 11.5px;
   font-weight: 600;
+  color: var(--rose);
   text-transform: capitalize;
-  margin-left: 6px;
+  letter-spacing: 0.02em;
+}
+.color-variants-count {
+  font-size: 11px;
+  color: #927c73;
+  letter-spacing: 0.05em;
+  font-style: italic;
+  font-family: 'Instrument Serif', Georgia, serif;
 }
 .colors-flex {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   margin-top: 10px;
+  padding: 4px 2px;
 }
 .color-swatch-btn {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   padding: 3px;
   background: #ffffff;
-  border: 1.5px solid #ded0c7;
+  border: 1.5px solid #dfd2ca;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
-  box-shadow: 0 1px 3px rgba(58, 41, 38, 0.05);
+  box-shadow: 0 2px 5px rgba(58, 41, 38, 0.08);
 }
 .color-swatch-btn:hover {
   border-color: var(--rose);
-  transform: translateY(-1px) scale(1.08);
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 6px 14px rgba(58, 41, 38, 0.14);
 }
 .color-swatch-btn.chosen {
-  border: 2px solid #733b36;
+  border-color: transparent;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(115, 59, 54, 0.22);
-  transform: scale(1.1);
+  box-shadow: 0 0 0 2px #fffaf7, 0 0 0 4.5px #bb7068, 0 4px 14px rgba(187, 112, 104, 0.35);
+  transform: translateY(-1px) scale(1.06);
 }
 .color-swatch-disc {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  display: block;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
-  transition: transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), inset 0 -1px 2px rgba(255, 255, 255, 0.25);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.color-swatch-disc::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+.color-swatch-check {
+  width: 13px;
+  height: 13px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  animation: swatchCheckPop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes swatchCheckPop {
+  0% {
+    transform: scale(0.4) rotate(-15deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+.color-swatch-tooltip {
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #2b1d19;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 4px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(43, 29, 25, 0.28);
+  z-index: 30;
+}
+.color-swatch-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px 4px 0 4px;
+  border-style: solid;
+  border-color: #2b1d19 transparent transparent transparent;
+}
+.color-swatch-btn:hover .color-swatch-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 .color-chip-btn {
   display: inline-flex;

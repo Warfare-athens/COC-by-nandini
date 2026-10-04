@@ -321,39 +321,77 @@ export default function DynamicProductClient({
           </div>
           <p className="tax">Inclusive of all taxes</p>
           <hr />
-          {availableColors.length > 0 && (
-            <div className="product-color-group">
-              <div className="select-head">
-                <b>
-                  Colour: <span className="color-active-title">{selectedColor || availableColors[0]}</span>
-                </b>
-              </div>
-              <div className="colors-flex">
-                {availableColors.map((colorName) => {
-                  const swatch = getColorSwatch(colorName);
-                  const isChosen = (selectedColor || availableColors[0]).toLowerCase() === colorName.toLowerCase();
-                  return (
-                    <button
-                      type="button"
-                      key={colorName}
-                      className={`color-swatch-btn ${isChosen ? "chosen" : ""}`}
-                      onClick={() => setSelectedColor(colorName)}
-                      aria-label={`Select colour ${colorName}`}
-                      title={colorName}
-                    >
+          {availableColors.length > 0 && (() => {
+            const activeColorName = selectedColor || availableColors[0] || "";
+            const activeSwatch = getColorSwatch(activeColorName);
+            return (
+              <div className="product-color-group">
+                <div className="select-head color-select-head">
+                  <div className="color-header-meta">
+                    <b>Colour:</b>
+                    <span className="color-active-chip">
                       <span
-                        className="color-swatch-disc"
+                        className="color-active-chip-dot"
                         style={{
-                          background: swatch.bg,
-                          border: swatch.border ? `1px solid ${swatch.border}` : "1px solid rgba(0,0,0,0.12)",
+                          background: activeSwatch.bg,
+                          border: activeSwatch.border ? `1px solid ${activeSwatch.border}` : "1px solid rgba(0,0,0,0.15)",
                         }}
                       />
-                    </button>
-                  );
-                })}
+                      <span className="color-active-chip-name">{activeColorName}</span>
+                    </span>
+                  </div>
+                  {availableColors.length > 1 && (
+                    <span className="color-variants-count">{availableColors.length} Shades</span>
+                  )}
+                </div>
+                <div className="colors-flex">
+                  {availableColors.map((colorName) => {
+                    const swatch = getColorSwatch(colorName);
+                    const isChosen = activeColorName.toLowerCase() === colorName.toLowerCase();
+                    return (
+                      <button
+                        type="button"
+                        key={colorName}
+                        className={`color-swatch-btn ${isChosen ? "chosen" : ""}`}
+                        onClick={() => setSelectedColor(colorName)}
+                        aria-label={`Select colour ${colorName}`}
+                        title={colorName}
+                      >
+                        <span
+                          className="color-swatch-disc"
+                          style={{
+                            background: swatch.bg,
+                            border: swatch.border ? `1px solid ${swatch.border}` : "1px solid rgba(0,0,0,0.12)",
+                          }}
+                        >
+                          {isChosen && (
+                            <svg
+                              className="color-swatch-check"
+                              viewBox="0 0 12 12"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M2.5 6.2L4.8 8.5L9.5 3.5"
+                                stroke={swatch.isLight ? "#2a1c18" : "#ffffff"}
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="color-swatch-tooltip" role="tooltip">
+                          {colorName}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
           {displaySizeLabels.length > 0 ? (
             <>
               <div className="select-head">
