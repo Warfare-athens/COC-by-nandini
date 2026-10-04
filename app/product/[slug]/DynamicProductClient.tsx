@@ -336,18 +336,18 @@ export default function DynamicProductClient({
                     <button
                       type="button"
                       key={colorName}
-                      className={`color-chip-btn ${isChosen ? "chosen" : ""}`}
+                      className={`color-swatch-btn ${isChosen ? "chosen" : ""}`}
                       onClick={() => setSelectedColor(colorName)}
                       aria-label={`Select colour ${colorName}`}
+                      title={colorName}
                     >
                       <span
-                        className="color-chip-dot"
+                        className="color-swatch-disc"
                         style={{
                           background: swatch.bg,
-                          border: swatch.border ? `1px solid ${swatch.border}` : "1px solid rgba(0,0,0,0.15)",
+                          border: swatch.border ? `1px solid ${swatch.border}` : "1px solid rgba(0,0,0,0.12)",
                         }}
                       />
-                      <span className="color-chip-text">{colorName}</span>
                     </button>
                   );
                 })}
