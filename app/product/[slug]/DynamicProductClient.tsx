@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
 import { addToCart } from "@/app/cart-helper";
 import { showGlobalStatus } from "@/app/global-status";
@@ -59,6 +60,7 @@ export default function DynamicProductClient({
   product: Product;
   reviews: Review[];
 }) {
+  const router = useRouter();
   const availableColors = extractProductColors(product.tags, product.product_variants);
   const [selectedColor, setSelectedColor] = useState(availableColors[0] || "");
   const variants = product.product_variants.filter(
@@ -131,7 +133,7 @@ export default function DynamicProductClient({
       (variant.size || variant.title).toUpperCase() === size.toUpperCase() ||
       (size.toUpperCase() === "XXL" && (variant.size || variant.title).toUpperCase() === "2XL"),
   );
-  const canBuy = Boolean(selected);
+  const canBuy = available.length > 0;
   const discount =
     product.compare_at_price_inr &&
     product.compare_at_price_inr > product.price_inr
@@ -179,7 +181,15 @@ export default function DynamicProductClient({
     : 0;
 
   const add = () => {
-    if (!canBuy) return;
+    if (!available.length) {
+      showGlobalStatus("This item is currently out of stock", "error");
+      return;
+    }
+    if (!size) {
+      showGlobalStatus("Please select a size first", "info");
+      document.querySelector(".sizes")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     addToCart({
       productId: product.id,
       name: product.name,
@@ -190,6 +200,27 @@ export default function DynamicProductClient({
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
+  };
+
+  const buyNow = () => {
+    if (!available.length) {
+      showGlobalStatus("This item is currently out of stock", "error");
+      return;
+    }
+    if (!size) {
+      showGlobalStatus("Please select a size first", "info");
+      document.querySelector(".sizes")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      price: `₹${Number(product.price_inr).toLocaleString("en-IN")}`,
+      img: mainImage,
+      size,
+      color: selectedColor || undefined,
+    });
+    router.push("/checkout");
   };
 
   const standardSizeOrder = [
@@ -223,6 +254,12 @@ export default function DynamicProductClient({
     size: lbl,
     available: true,
   }));
+
+  useEffect(() => {
+    if (!size && displaySizeLabels.length === 1) {
+      setSize(displaySizeLabels[0]);
+    }
+  }, [displaySizeLabels, size]);
 
   return (
     <main>
@@ -363,7 +400,7 @@ export default function DynamicProductClient({
           <button
             className="detail-buy"
             type="button"
-            onClick={add}
+            onClick={buyNow}
             disabled={!canBuy}
           >
             Buy now
@@ -480,6 +517,7 @@ export default function DynamicProductClient({
         selectedSize={size}
         onSelectSize={(s) => setSize(s)}
         onAddToCart={add}
+        onBuyNow={buyNow}
         added={added}
         canBuy={canBuy}
         visible={stickyVisible}

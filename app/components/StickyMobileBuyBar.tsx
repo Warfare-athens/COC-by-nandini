@@ -14,6 +14,7 @@ export interface StickyMobileBuyBarProps {
   selectedSize: string;
   onSelectSize: (size: string) => void;
   onAddToCart: () => void;
+  onBuyNow?: () => void;
   added: boolean;
   canBuy: boolean;
   visible: boolean;
@@ -25,6 +26,7 @@ export default function StickyMobileBuyBar({
   selectedSize,
   onSelectSize,
   onAddToCart,
+  onBuyNow,
   added,
   canBuy,
   visible,
@@ -139,20 +141,66 @@ export default function StickyMobileBuyBar({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={onAddToCart}
-            disabled={!canBuy}
-            className={`h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-white shadow-xs transition active:scale-95 ${
-              added
-                ? "bg-[#28a745]"
-                : canBuy
-                ? "bg-[#bb7068] hover:bg-[#a6544e]"
-                : "bg-[#cdb9ae] cursor-not-allowed"
-            }`}
-          >
-            {added ? "Added ✓" : !canBuy ? "Out of Stock" : "Add to Bag +"}
-          </button>
+          {onBuyNow ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!selectedSize && hasMultipleSizes) {
+                    setSizePickerOpen(true);
+                  } else {
+                    onAddToCart();
+                  }
+                }}
+                disabled={!canBuy}
+                className={`h-10 px-3 rounded-xl text-[11px] font-bold uppercase tracking-wider border border-[#d4b8aa] bg-white text-[#3a2926] shadow-xs transition active:scale-95 ${
+                  added ? "text-[#28a745] border-[#28a745]" : ""
+                }`}
+                title="Add to Bag"
+              >
+                {added ? "Added ✓" : "+ Bag"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!selectedSize && hasMultipleSizes) {
+                    setSizePickerOpen(true);
+                  } else {
+                    onBuyNow();
+                  }
+                }}
+                disabled={!canBuy}
+                className={`h-10 px-3.5 rounded-xl text-[11px] font-bold uppercase tracking-wider text-white shadow-xs transition active:scale-95 ${
+                  !canBuy
+                    ? "bg-[#cdb9ae] cursor-not-allowed"
+                    : "bg-[#bb7068] hover:bg-[#a6544e]"
+                }`}
+              >
+                Buy Now →
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (!selectedSize && hasMultipleSizes) {
+                  setSizePickerOpen(true);
+                } else {
+                  onAddToCart();
+                }
+              }}
+              disabled={!canBuy}
+              className={`h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-white shadow-xs transition active:scale-95 ${
+                added
+                  ? "bg-[#28a745]"
+                  : canBuy
+                  ? "bg-[#bb7068] hover:bg-[#a6544e]"
+                  : "bg-[#cdb9ae] cursor-not-allowed"
+              }`}
+            >
+              {added ? "Added ✓" : !canBuy ? "Out of Stock" : "Add to Bag +"}
+            </button>
+          )}
         </div>
       </div>
     </aside>
