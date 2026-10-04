@@ -165,12 +165,18 @@ export async function POST(request: Request) {
     const prompt = `You are the visual catalog specialist for Carnival of Clothes, an Indian women's fashion store. Inspect the images as the primary evidence and use the supplied name as supporting context. Classify only within this fixed taxonomy: Top Wear > Shirts/T-shirts/Crop Tops/Tank Tops/Bodysuits; Bottom Wear > Jeans/Trousers/Cargo Pants/Palazzo Pants/Skirts/Shorts; Indian > Kurtis/Kurta Sets/Sarees/Lehenga Sets/Anarkali Suits/Dupattas; Korean > Korean Tops/Korean Dresses/Korean Co-ords/Oversized Shirts/Pleated Skirts; Dresses (no subcategory); Co-ord Sets (no subcategory); Accessories > Handbags/Jewellery/Sunglasses/Belts/Hair Accessories/Scarves. Never invent a category. Identify garment construction visually even when its type is missing from the name—for example a visually identifiable kurti belongs to Indian > Kurtis. Also suggest Everyday, Party Wear, or both as occasions. Do not invent fabric composition, technical, sustainability, or care claims. Price: INR ${input.priceInr}. Product name: ${input.name}. For clothing/apparel, always return inclusive Indian sizes from XS to 4XL: ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"] unless the product is an accessory (use ["One Size"]) or free size. Return polished Indian-English copy, SEO, alt text, and sensible sizes. Plain text, not markdown.`;
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    // Try configured model, fallback to 3.8-flash, then 3.5-flash
-    const modelsToTry = [
+    // Try configured model, followed by pool of active Gemini flash models
+    const candidateModels = [
       process.env.GEMINI_MODEL,
       "gemini-3.8-flash",
+      "gemini-3.7-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-flash-latest",
       "gemini-3.5-flash",
     ].filter(Boolean) as string[];
+
+    const modelsToTry = Array.from(new Set(candidateModels));
 
     let responseText: string | null = null;
     let lastError: Error | null = null;
