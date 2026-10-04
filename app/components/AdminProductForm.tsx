@@ -66,29 +66,72 @@ export default function AdminProductForm() {
   const [statusText, setStatusText] = useState("");
   const [error, setError] = useState("");
   const [draftReady, setDraftReady] = useState(false);
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
   const [compareAtPrice, setCompareAtPrice] = useState("");
   const [isBestSeller, setIsBestSeller] = useState(false);
   const [isNewArrival, setIsNewArrival] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
   const saveMessageRef = useRef<HTMLDivElement>(null);
+  const isSubmittedRef = useRef(false);
   const router = useRouter();
+
+  const resetForm = () => {
+    setName("");
+    setPriceInr("");
+    setTaxRate("");
+    setImages([]);
+    setPendingImages([]);
+    setGenerated(emptyGenerated);
+    setSizeInventory(DEFAULT_SIZES_UP_TO_4XL.map((size) => ({ size, quantity: 0 })));
+    setAiGenerated(false);
+    setCompareAtPrice("");
+    setIsBestSeller(false);
+    setIsNewArrival(false);
+    setIsFeatured(false);
+    setError("");
+    setStatusText("");
+    setHasRestoredDraft(false);
+    isSubmittedRef.current = false;
+    try {
+      localStorage.removeItem(productDraftKey);
+    } catch {}
+  };
 
   useEffect(() => {
     const restoreDraft = window.setTimeout(() => {
       try {
-        const saved = JSON.parse(localStorage.getItem(productDraftKey) || "null");
-        if (saved) {
-          setName(saved.name || "");
-          setPriceInr(saved.priceInr || "");
-          setImages(Array.isArray(saved.images) ? saved.images : []);
-          setGenerated({ ...emptyGenerated, ...(saved.generated || {}) });
-          setSizeInventory(Array.isArray(saved.sizeInventory) ? saved.sizeInventory : []);
-          setAiGenerated(Boolean(saved.aiGenerated));
-          setCompareAtPrice(saved.compareAtPrice || "");
-          setIsBestSeller(Boolean(saved.isBestSeller));
-          setIsNewArrival(Boolean(saved.isNewArrival));
-          setIsFeatured(Boolean(saved.isFeatured));
-          setStatusText("Unfinished product restored automatically.");
+        const raw = typeof window !== "undefined" ? localStorage.getItem(productDraftKey) : null;
+        if (raw) {
+          const saved = JSON.parse(raw);
+          const hasContent = Boolean(
+            saved && (
+              (typeof saved.name === "string" && saved.name.trim().length > 0) ||
+              (typeof saved.priceInr === "string" && String(saved.priceInr).trim().length > 0) ||
+              (Array.isArray(saved.images) && saved.images.length > 0) ||
+              (saved.generated?.slug && String(saved.generated.slug).trim().length > 0)
+            )
+          );
+
+          if (hasContent) {
+            setName(saved.name || "");
+            setPriceInr(saved.priceInr ? String(saved.priceInr) : "");
+            setTaxRate(saved.taxRate || "");
+            setImages(Array.isArray(saved.images) ? saved.images : []);
+            setGenerated({ ...emptyGenerated, ...(saved.generated || {}) });
+            setSizeInventory(
+              Array.isArray(saved.sizeInventory) && saved.sizeInventory.length > 0
+                ? saved.sizeInventory
+                : DEFAULT_SIZES_UP_TO_4XL.map((size) => ({ size, quantity: 0 }))
+            );
+            setAiGenerated(Boolean(saved.aiGenerated));
+            setCompareAtPrice(saved.compareAtPrice || "");
+            setIsBestSeller(Boolean(saved.isBestSeller));
+            setIsNewArrival(Boolean(saved.isNewArrival));
+            setIsFeatured(Boolean(saved.isFeatured));
+            setHasRestoredDraft(true);
+          } else {
+            localStorage.removeItem(productDraftKey);
+          }
         }
       } catch {
         localStorage.removeItem(productDraftKey);
@@ -100,13 +143,58 @@ export default function AdminProductForm() {
     return () => window.clearTimeout(restoreDraft);
   }, []);
 
+  const hasMeaningfulContent = Boolean(
+    name.trim().length > 0 ||
+    priceInr.trim().length > 0 ||
+    images.length > 0 ||
+    generated.slug.trim().length > 0 ||
+    generated.description.trim().length > 0
+  );
+
   useEffect(() => {
-    if (!draftReady) return;
-    localStorage.setItem(productDraftKey, JSON.stringify({
-      name, priceInr, images, generated, sizeInventory, aiGenerated,
-      compareAtPrice, isBestSeller, isNewArrival, isFeatured,
-    }));
-  }, [draftReady, name, priceInr, images, generated, sizeInventory, aiGenerated, compareAtPrice, isBestSeller, isNewArrival, isFeatured]);
+    if (!draftReady || isSubmittedRef.current) return;
+
+    if (!hasMeaningfulContent) {
+      try {
+        localStorage.removeItem(productDraftKey);
+      } catch {}
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        productDraftKey,
+        JSON.stringify({
+          name,
+          priceInr,
+          taxRate,
+          images,
+          generated,
+          sizeInventory,
+          aiGenerated,
+          compareAtPrice,
+          isBestSeller,
+          isNewArrival,
+          isFeatured,
+          savedAt: Date.now(),
+        })
+      );
+    } catch {}
+  }, [
+    draftReady,
+    name,
+    priceInr,
+    taxRate,
+    images,
+    generated,
+    sizeInventory,
+    aiGenerated,
+    compareAtPrice,
+    isBestSeller,
+    isNewArrival,
+    isFeatured,
+    hasMeaningfulContent,
+  ]);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent(busy ? "coc-loader-show" : "coc-loader-hide", {
@@ -167,12 +255,110 @@ export default function AdminProductForm() {
     }
   };
 
+  const fillManually = () => {
+    setError("");
+    const cleanName = name.trim();
+    const lower = cleanName.toLowerCase();
+    const slug = cleanName
+      ? lower.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `product-${Date.now().toString(36)}`
+      : `product-${Date.now().toString(36)}`;
+    const prefix = cleanName ? (cleanName.replace(/[^a-zA-Z]/g, "").slice(0, 4).toUpperCase() || "PROD") : "PROD";
+    const sku = `COC-${prefix}-${Math.floor(100 + Math.random() * 900)}`;
+
+    let category = "Top Wear";
+    let subcategory = "";
+    if (cleanName) {
+      if (/\b(dress|gown|maxi|midi)\b/.test(lower)) {
+        category = "Dresses";
+      } else if (/\b(co-?ord|coord|set|suit)\b/.test(lower) && !/\b(kurta|anarkali|saree)\b/.test(lower)) {
+        category = "Co-ord Sets";
+      } else if (/\b(kurti|kurta|saree|sari|lehenga|anarkali|dupatta|ethnic)\b/.test(lower)) {
+        category = "Indian";
+        if (lower.includes("kurti")) subcategory = "Kurtis";
+        else if (lower.includes("kurta")) subcategory = "Kurta Sets";
+        else if (lower.includes("saree") || lower.includes("sari")) subcategory = "Sarees";
+        else if (lower.includes("lehenga")) subcategory = "Lehenga Sets";
+        else if (lower.includes("anarkali")) subcategory = "Anarkali Suits";
+        else if (lower.includes("dupatta")) subcategory = "Dupattas";
+      } else if (/\b(korean)\b/.test(lower)) {
+        category = "Korean";
+        if (lower.includes("dress")) subcategory = "Korean Dresses";
+        else if (lower.includes("coord") || lower.includes("set")) subcategory = "Korean Co-ords";
+        else if (lower.includes("skirt")) subcategory = "Pleated Skirts";
+        else if (lower.includes("shirt")) subcategory = "Oversized Shirts";
+        else subcategory = "Korean Tops";
+      } else if (/\b(jean|denim|trouser|pant|cargo|palazzo|skirt|short)\b/.test(lower)) {
+        category = "Bottom Wear";
+        if (lower.includes("jean") || lower.includes("denim")) subcategory = "Jeans";
+        else if (lower.includes("cargo")) subcategory = "Cargo Pants";
+        else if (lower.includes("palazzo")) subcategory = "Palazzo Pants";
+        else if (lower.includes("skirt")) subcategory = "Skirts";
+        else if (lower.includes("short")) subcategory = "Shorts";
+        else subcategory = "Trousers";
+      } else if (/\b(top|shirt|t-?shirt|tee|crop|tank|bodysuit|blouse)\b/.test(lower)) {
+        category = "Top Wear";
+        if (lower.includes("t-shirt") || lower.includes("tee")) subcategory = "T-shirts";
+        else if (lower.includes("crop")) subcategory = "Crop Tops";
+        else if (lower.includes("tank")) subcategory = "Tank Tops";
+        else if (lower.includes("bodysuit")) subcategory = "Bodysuits";
+        else subcategory = "Shirts";
+      } else if (/\b(bag|handbag|sunglass|glasses|jewel|earring|necklace|belt|scarf|hair)\b/.test(lower)) {
+        category = "Accessories";
+        if (lower.includes("sunglass") || lower.includes("glasses")) subcategory = "Sunglasses";
+        else if (lower.includes("bag")) subcategory = "Handbags";
+        else if (lower.includes("belt")) subcategory = "Belts";
+        else if (lower.includes("scarf")) subcategory = "Scarves";
+        else if (lower.includes("hair")) subcategory = "Hair Accessories";
+        else subcategory = "Jewellery";
+      }
+    }
+
+    const isApparel = category !== "Accessories";
+    const sizes = isApparel ? DEFAULT_SIZES_UP_TO_4XL : ["One Size"];
+
+    setGenerated({
+      slug,
+      sku,
+      shortDescription: cleanName ? `${cleanName} — handcrafted elegance by Carnival of Clothes.` : "",
+      description: cleanName
+        ? `Discover the ${cleanName} from Carnival of Clothes by Nandini. Designed for premium comfort and effortless style, this piece blends contemporary design with exquisite tailoring.\n\nCrafted with premium materials and finished with meticulous care at our Ahmedabad boutique studio.`
+        : "Crafted with premium materials and finished with meticulous care at our Ahmedabad boutique studio.",
+      category,
+      subcategory,
+      occasions: ["Everyday"],
+      tags: [category.toLowerCase(), "carnival-edit", "trending"],
+      colors: ["Multi"],
+      suggestedSizes: sizes,
+      material: "Premium Quality Fabric",
+      careInstructions: "Dry clean or gentle hand wash in cold water with mild detergent. Do not bleach. Dry in shade.",
+      styleNotes: "Style with complementary footwear and minimalist accessories for an effortless look.",
+      seoTitle: cleanName ? `${cleanName} | Carnival of Clothes by Nandini` : "Carnival of Clothes by Nandini",
+      seoDescription: cleanName ? `Shop the ${cleanName} online at Carnival of Clothes. Premium women's fashion curated in Ahmedabad with pan-India delivery.` : "",
+      searchKeywords: cleanName ? [cleanName.toLowerCase(), category.toLowerCase(), "carnival of clothes", "buy online"] : [category.toLowerCase(), "buy online"],
+      imageAltTexts: cleanName ? [cleanName] : [],
+    });
+
+    setSizeInventory(
+      sizes.map((size) => ({
+        size,
+        quantity: 0,
+      }))
+    );
+    setAiGenerated(true);
+    setStatusText(
+      cleanName
+        ? "Starter template loaded! You can now adjust categories, sizes, descriptions, and save."
+        : "Manual editor enabled! Fill in product name, price, images, and details below."
+    );
+    showGlobalStatus("Form ready for manual editing", "info", 3000);
+  };
+
   const generate = async () => {
     if (!name.trim() || !Number(priceInr))
       return setError("Enter the product name and price first.");
     setBusy(true);
     setError("");
-    setStatusText("Gemini is analysing the product and images…");
+    setStatusText("Analysing product and generating content…");
     try {
       const response = await fetch("/api/admin/products/generate", {
         method: "POST",
@@ -201,18 +387,25 @@ export default function AdminProductForm() {
         })),
       );
       setAiGenerated(true);
-      setStatusText(
-        "Product content generated. Review and edit before saving.",
-      );
+
+      if (data.fallbackUsed) {
+        setStatusText(data.fallbackReason || "Starter template loaded! You can adjust details and save.");
+        showGlobalStatus(data.fallbackReason || "AI limit reached; starter template loaded", "info", 6000);
+      } else {
+        setStatusText(
+          "Product content generated. Review and edit before saving.",
+        );
+      }
     } catch (generationError) {
-      setStatusText("");
-      setError(
-        generationError instanceof DOMException && generationError.name === "TimeoutError"
-          ? "AI generation took too long. Please tap Generate with AI again."
-          : generationError instanceof Error
-          ? generationError.message
-          : "AI generation failed.",
-      );
+      // If AI fails, unlock the form with manual fallback so the user is never blocked!
+      fillManually();
+      const rawMsg = generationError instanceof Error ? generationError.message : "AI generation failed.";
+      const isQuota = rawMsg.toLowerCase().includes("quota") || rawMsg.toLowerCase().includes("limit") || rawMsg.includes("429");
+      const notice = isQuota
+        ? "Gemini free quota is exhausted. We've auto-filled a smart starter template so you can continue adding your product!"
+        : `${rawMsg} We've auto-filled a smart starter template so you can continue adding your product!`;
+      setStatusText(notice);
+      showGlobalStatus(notice, "info", 6000);
     } finally {
       setBusy(false);
     }
@@ -292,8 +485,14 @@ export default function AdminProductForm() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
-      localStorage.removeItem(productDraftKey);
-      showGlobalStatus("Product saved and published successfully", "success");
+
+      isSubmittedRef.current = true;
+      try {
+        localStorage.removeItem(productDraftKey);
+      } catch {}
+
+      showGlobalStatus("Product saved and published successfully", "success", 4000);
+      resetForm();
       router.push("/admin/products");
       router.refresh();
     } catch (saveError) {
@@ -310,17 +509,86 @@ export default function AdminProductForm() {
 
   return (
     <form className="admin-form" onSubmit={submit}>
+      {hasRestoredDraft && (
+        <div className="admin-draft-banner">
+          <div className="admin-draft-banner-content">
+            <div className="admin-draft-banner-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+              <strong>Unfinished draft restored</strong>
+            </div>
+            <p>
+              An unsaved product draft from your previous session was recovered. You can continue editing or discard it to start fresh with a blank form.
+            </p>
+          </div>
+          <div className="admin-draft-banner-actions">
+            <button
+              type="button"
+              className="admin-button admin-button-secondary admin-btn-discard"
+              onClick={() => {
+                resetForm();
+                showGlobalStatus("Draft discarded. Ready for a new product.", "info", 3000);
+              }}
+            >
+              Discard draft & start fresh
+            </button>
+            <button
+              type="button"
+              className="admin-draft-keep-btn"
+              onClick={() => setHasRestoredDraft(false)}
+            >
+              Keep editing draft
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="admin-panel admin-product-builder">
         <div className="admin-product-builder-head">
-          <h2>AI product builder</h2>
-          <button
-            type="button"
-            className="admin-button"
-            onClick={generate}
-            disabled={busy}
-          >
-            Generate with AI
-          </button>
+          <div>
+            <h2>Product content & builder</h2>
+            <p style={{ margin: "2px 0 0", fontSize: "11px", color: "var(--admin-text-muted)" }}>
+              Generate with Gemini AI or enter details manually below.
+            </p>
+          </div>
+          <div className="admin-builder-actions">
+            <button
+              type="button"
+              className="admin-button"
+              onClick={generate}
+              disabled={busy}
+              title="Analyse images and name with Gemini AI"
+            >
+              Generate with AI
+            </button>
+            <button
+              type="button"
+              className="admin-button admin-button-secondary"
+              onClick={fillManually}
+              disabled={busy}
+              title="Skip AI and fill product details manually"
+            >
+              Enter manually / Quick fill
+            </button>
+            {hasMeaningfulContent && (
+              <button
+                type="button"
+                className="admin-button admin-button-secondary admin-btn-clear"
+                onClick={() => {
+                  if (window.confirm("Clear all fields and start a fresh product? Any unsaved edits will be discarded.")) {
+                    resetForm();
+                    showGlobalStatus("Form cleared. Ready for a new product.", "info", 3000);
+                  }
+                }}
+                disabled={busy}
+                title="Discard all changes and start with a blank form"
+              >
+                Start fresh / Clear
+              </button>
+            )}
+          </div>
         </div>
         <div className="admin-form-grid">
           <div className="admin-field">
@@ -425,8 +693,18 @@ export default function AdminProductForm() {
         )}
       </div>
 
-      {statusText && <div className="admin-notice">{statusText}</div>}
-      {error && <div className="admin-error">{error}</div>}
+      {statusText && (
+        <div className="admin-notice" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{statusText}</span>
+          <button type="button" className="admin-notice-dismiss" onClick={() => setStatusText("")} aria-label="Dismiss notice">×</button>
+        </div>
+      )}
+      {error && (
+        <div className="admin-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button type="button" className="admin-notice-dismiss" onClick={() => setError("")} aria-label="Dismiss error">×</button>
+        </div>
+      )}
 
       {aiGenerated && (
         <div className="admin-generated-content">

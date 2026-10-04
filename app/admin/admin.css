@@ -2226,4 +2226,105 @@
   }
 }
 
+.admin-builder-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-button-secondary {
+  border-color: #d9c5ba !important;
+  background: #fdf8f5 !important;
+  color: #7b4a41 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-button-secondary:hover:not(:disabled) {
+  background: #f4e5dd !important;
+  border-color: #ba6f66 !important;
+  color: #552d26 !important;
+}
+
+/* Unfinished Draft Management Banner */
+.admin-draft-banner {
+  border: 1px solid #e5c3b8;
+  border-radius: 14px;
+  background: #fdf5f1;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 14px rgba(187, 112, 104, 0.08);
+  margin-bottom: 4px;
+}
+
+.admin-draft-banner-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.admin-draft-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #7b3830;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-draft-banner-content p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #785a53;
+}
+
+.admin-draft-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-draft-keep-btn {
+  background: none;
+  border: none;
+  color: #8c6057;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 999px;
+  transition: all 0.15s ease;
+}
+
+.admin-draft-keep-btn:hover {
+  background: #f3dfd6;
+  color: #552d26;
+}
+
+.admin-btn-discard {
+  color: #a44840 !important;
+  border-color: #e5b9b2 !important;
+}
+
+.admin-btn-discard:hover:not(:disabled) {
+  background: #fbeae7 !important;
+  border-color: #d88980 !important;
+  color: #862923 !important;
+}
+
+.admin-btn-clear {
+  color: #7d5952 !important;
+}
+
+
+
 
