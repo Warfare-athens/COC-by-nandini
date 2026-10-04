@@ -1,3 +1,11 @@
+import { extractProductColors, getColorSwatch, parseImageColorAndAlt } from "./colors";
+
+export type ProductColorOption = {
+  name: string;
+  swatch: { bg: string; border?: string; isLight?: boolean };
+  imageUrl?: string;
+};
+
 export type ProductSizeOption = {
   size: string;
   inStock: boolean;
@@ -15,6 +23,7 @@ export type HomeProduct = {
   href: string;
   position: string;
   sizes: ProductSizeOption[];
+  colors?: ProductColorOption[];
   isAccessory: boolean;
 };
 
@@ -85,6 +94,22 @@ export function mapDbProductToHomeProduct(product: Record<string, unknown>): Hom
     }
   }
 
+  const rawImages = Array.isArray(product.product_images) ? (product.product_images as Record<string, unknown>[]) : [];
+  const colorNames = extractProductColors(tags, rawVariants as { color?: string | null }[]);
+
+  const colors: ProductColorOption[] = colorNames.map((colorName) => {
+    const swatch = getColorSwatch(colorName);
+    const matchingImg = rawImages.find((img) => {
+      const imgColor = (typeof img.color === "string" ? img.color : parseImageColorAndAlt(typeof img.alt_text === "string" ? img.alt_text : null).color);
+      return imgColor && imgColor.toLowerCase() === colorName.toLowerCase();
+    });
+    return {
+      name: colorName,
+      swatch,
+      imageUrl: matchingImg?.url ? String(matchingImg.url) : undefined,
+    };
+  });
+
   return {
     id: product.id ? String(product.id) : undefined,
     name: String(product.name),
@@ -106,6 +131,7 @@ export function mapDbProductToHomeProduct(product: Record<string, unknown>): Hom
     href: `/product/${String(product.slug)}`,
     position: "50%",
     sizes,
+    colors,
     isAccessory,
   } satisfies HomeProduct;
 }

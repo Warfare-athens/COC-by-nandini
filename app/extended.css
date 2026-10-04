@@ -112,3 +112,30 @@
   display: inline-block;
   flex-shrink: 0;
 }
+
+/* Card Color Swatches */
+.card-color-swatches {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 0 2px 0;
+}
+.card-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+.card-color-dot:hover,
+.card-color-dot.active {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #bb7068;
+}
+.card-color-more {
+  font-size: 9.5px;
+  color: #8c6a61;
+  font-weight: 600;
+  margin-left: 2px;
+}

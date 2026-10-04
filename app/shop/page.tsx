@@ -16,7 +16,7 @@ export default async function ShopPage() {
       const { data } = await getSupabaseAdmin()
         .from("products")
         .select(
-          "id,name,slug,short_description,description,hero_image_url,price_inr,compare_at_price_inr,tags,is_featured,is_best_seller,is_new_arrival,created_at,product_variants(id,size,title,inventory_quantity,is_active)",
+          "id,name,slug,short_description,description,hero_image_url,price_inr,compare_at_price_inr,tags,is_featured,is_best_seller,is_new_arrival,created_at,product_variants(id,size,color,title,inventory_quantity,is_active),product_images(id,url,alt_text,is_hero,sort_order)",
         )
         .eq("status", "active")
         .order("published_at", { ascending: false });

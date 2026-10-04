@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { showGlobalStatus } from "@/app/global-status";
 import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, publicTags, tagValue, tagValues, taxonomyTag } from "@/lib/product-taxonomy";
-import { POPULAR_PRODUCT_COLORS, getColorSwatch, detectColorFromName } from "@/lib/colors";
+import { POPULAR_PRODUCT_COLORS, getColorSwatch, detectColorFromName, serializeImageAltText, parseImageColorAndAlt } from "@/lib/colors";
 import UniversalSelect from "./UniversalSelect";
 import AdminGstPriceHelper from "./AdminGstPriceHelper";
 import AdminDeleteProductModal from "./AdminDeleteProductModal";
@@ -26,6 +26,7 @@ type ProductImage = {
   id?: string;
   url: string;
   alt_text: string | null;
+  color?: string | null;
   is_hero: boolean;
   sort_order: number;
 };
@@ -75,8 +76,8 @@ export default function AdminProductEditForm({
   const [variants, setVariants] = useState<Variant[]>(
     product.product_variants || [],
   );
-  const [images, setImages] = useState<ProductImage[]>(
-    product.product_images?.length
+  const [images, setImages] = useState<ProductImage[]>(() => {
+    const raw = product.product_images?.length
       ? product.product_images
       : [
           {
@@ -85,8 +86,16 @@ export default function AdminProductEditForm({
             is_hero: true,
             sort_order: 0,
           },
-        ],
-  );
+        ];
+    return raw.map((img) => {
+      const parsed = parseImageColorAndAlt(img.alt_text);
+      return {
+        ...img,
+        color: img.color || parsed.color,
+        alt_text: parsed.altText || img.alt_text,
+      };
+    });
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -284,7 +293,11 @@ export default function AdminProductEditForm({
         price_inr: variant.price_inr || null,
         compare_at_price_inr: variant.compare_at_price_inr || null,
       })),
-      images: images.map((image, index) => ({ ...image, sort_order: index })),
+      images: images.map((image, index) => ({
+        ...image,
+        alt_text: serializeImageAltText(image.alt_text, image.color),
+        sort_order: index,
+      })),
     };
     try {
       const response = await fetch(`/api/admin/products/${product.id}`, {
@@ -450,36 +463,76 @@ export default function AdminProductEditForm({
           </label>
         </div>
         <div className="admin-edit-image-grid">
-          {images.map((image, index) => (
-            <article className="admin-edit-image" key={image.id || image.url}>
-              <img src={image.url} alt={image.alt_text || product.name} />
-              <input
-                value={image.alt_text || ""}
-                onChange={(event) =>
-                  setImages((current) =>
-                    current.map((item, imageIndex) =>
-                      imageIndex === index
-                        ? { ...item, alt_text: event.target.value }
-                        : item,
-                    ),
-                  )
-                }
-                placeholder="Alt text"
-              />
-              <div>
-                <button
-                  type="button"
-                  className={image.is_hero ? "active" : ""}
-                  onClick={() => setHero(index)}
-                >
-                  {image.is_hero ? "Hero image" : "Set as hero"}
-                </button>
-                <button type="button" onClick={() => removeImage(index)}>
-                  Remove
-                </button>
-              </div>
-            </article>
-          ))}
+          {images.map((image, index) => {
+            const swatch = image.color ? getColorSwatch(image.color) : null;
+            return (
+              <article className="admin-edit-image" key={image.id || image.url}>
+                <div style={{ position: "relative" }}>
+                  <img src={image.url} alt={image.alt_text || product.name} />
+                  {image.color && swatch && (
+                    <span className="admin-image-color-pill">
+                      <span
+                        className="admin-image-color-dot"
+                        style={{
+                          background: swatch.bg,
+                          border: swatch.border ? `1px solid ${swatch.border}` : "none",
+                        }}
+                      />
+                      {image.color}
+                    </span>
+                  )}
+                  {image.is_hero && <small className="admin-hero-badge">HERO</small>}
+                </div>
+                <div className="admin-edit-image-color">
+                  <label>Colour</label>
+                  <select
+                    value={image.color || ""}
+                    onChange={(event) =>
+                      setImages((current) =>
+                        current.map((item, imageIndex) =>
+                          imageIndex === index
+                            ? { ...item, color: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    <option value="">All Colours (Shared)</option>
+                    {colors.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <input
+                  value={image.alt_text || ""}
+                  onChange={(event) =>
+                    setImages((current) =>
+                      current.map((item, imageIndex) =>
+                        imageIndex === index
+                          ? { ...item, alt_text: event.target.value }
+                          : item,
+                      ),
+                    )
+                  }
+                  placeholder="Alt caption"
+                />
+                <div>
+                  <button
+                    type="button"
+                    className={image.is_hero ? "active" : ""}
+                    onClick={() => setHero(index)}
+                  >
+                    {image.is_hero ? "Hero image" : "Set as hero"}
+                  </button>
+                  <button type="button" onClick={() => removeImage(index)}>
+                    Remove
+                  </button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 

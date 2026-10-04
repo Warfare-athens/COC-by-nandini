@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PRODUCT_CATEGORIES, PRODUCT_TAXONOMY, OCCASIONS, taxonomyTag } from "@/lib/product-taxonomy";
-import { POPULAR_PRODUCT_COLORS, getColorSwatch, detectColorFromName } from "@/lib/colors";
+import { POPULAR_PRODUCT_COLORS, getColorSwatch, detectColorFromName, serializeImageAltText, parseImageColorAndAlt } from "@/lib/colors";
 import { showGlobalStatus } from "@/app/global-status";
 import UniversalSelect from "./UniversalSelect";
 import AdminGstPriceHelper from "./AdminGstPriceHelper";
@@ -58,6 +58,7 @@ export default function AdminProductForm() {
   const [taxRate, setTaxRate] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [imageColors, setImageColors] = useState<Record<string, string>>({});
   const [generated, setGenerated] = useState<GeneratedFields>(emptyGenerated);
   const [sizeInventory, setSizeInventory] = useState<SizeInventory[]>(() =>
     DEFAULT_SIZES_UP_TO_4XL.map((size) => ({ size, quantity: 0 }))
@@ -83,6 +84,7 @@ export default function AdminProductForm() {
     setTaxRate("");
     setImages([]);
     setPendingImages([]);
+    setImageColors({});
     setGenerated(emptyGenerated);
     setSizeInventory(DEFAULT_SIZES_UP_TO_4XL.map((size) => ({ size, quantity: 0 })));
     setAiGenerated(false);
@@ -120,6 +122,9 @@ export default function AdminProductForm() {
             setPriceInr(saved.priceInr ? String(saved.priceInr) : "");
             setTaxRate(saved.taxRate || "");
             setImages(Array.isArray(saved.images) ? saved.images : []);
+            if (saved.imageColors && typeof saved.imageColors === "object") {
+              setImageColors(saved.imageColors);
+            }
             setGenerated({ ...emptyGenerated, ...(saved.generated || {}) });
             setSizeInventory(
               Array.isArray(saved.sizeInventory) && saved.sizeInventory.length > 0
@@ -172,6 +177,7 @@ export default function AdminProductForm() {
           priceInr,
           taxRate,
           images,
+          imageColors,
           generated,
           sizeInventory,
           aiGenerated,
@@ -189,6 +195,7 @@ export default function AdminProductForm() {
     priceInr,
     taxRate,
     images,
+    imageColors,
     generated,
     sizeInventory,
     aiGenerated,
@@ -496,11 +503,14 @@ export default function AdminProductForm() {
       isFeatured,
       sizes: cleanSizeInventory.map((item) => item.size.trim()),
       sizeInventory: cleanSizeInventory,
-      images: images.map((url, index) => ({
-        url,
-        altText:
-          generated.imageAltTexts[index] || generated.shortDescription || name,
-      })),
+      images: images.map((url, index) => {
+        const assignedColor = imageColors[url] || "";
+        const baseAlt = generated.imageAltTexts[index] || generated.shortDescription || name;
+        return {
+          url,
+          altText: serializeImageAltText(baseAlt, assignedColor),
+        };
+      }),
       material: generated.material,
       colors: generated.colors,
       careInstructions: generated.careInstructions,
@@ -707,22 +717,75 @@ export default function AdminProductForm() {
         </div>
         {(images.length > 0 || pendingImages.length > 0) && (
           <div className="admin-image-grid">
-            {images.map((url, index) => (
-              <div className="admin-image-card" key={url}>
-                <img src={url} alt={`Uploaded product ${index + 1}`} />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setImages((current) =>
-                      current.filter((item) => item !== url),
-                    )
-                  }
-                >
-                  Remove
-                </button>
-                {index === 0 && <small>HERO</small>}
-              </div>
-            ))}
+            {images.map((url, index) => {
+              const assigned = imageColors[url] || "";
+              const swatch = assigned ? getColorSwatch(assigned) : null;
+              return (
+                <div className="admin-image-card" key={url}>
+                  <img src={url} alt={`Uploaded product ${index + 1}`} />
+                  <div className="admin-image-card-footer">
+                    <div className="admin-image-color-select-wrap">
+                      <label>Colour</label>
+                      <select
+                        value={assigned}
+                        onChange={(e) =>
+                          setImageColors((prev) => ({
+                            ...prev,
+                            [url]: e.target.value,
+                          }))
+                        }
+                        aria-label="Assign colour to photo"
+                      >
+                        <option value="">All Colours (Shared)</option>
+                        {generated.colors.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="admin-image-card-actions">
+                      <button
+                        type="button"
+                        className={index === 0 ? "active" : ""}
+                        onClick={() => {
+                          setImages((current) => [url, ...current.filter((u) => u !== url)]);
+                        }}
+                        title={index === 0 ? "Main cover photo" : "Make main cover photo"}
+                      >
+                        {index === 0 ? "Hero" : "Set Hero"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImages((current) => current.filter((item) => item !== url));
+                          setImageColors((prev) => {
+                            const next = { ...prev };
+                            delete next[url];
+                            return next;
+                          });
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  {assigned && swatch && (
+                    <span className="admin-image-color-pill">
+                      <span
+                        className="admin-image-color-dot"
+                        style={{
+                          background: swatch.bg,
+                          border: swatch.border ? `1px solid ${swatch.border}` : "none",
+                        }}
+                      />
+                      {assigned}
+                    </span>
+                  )}
+                  {index === 0 && <small>HERO</small>}
+                </div>
+              );
+            })}
             {pendingImages.map((url, index) => (
               <div className="admin-image-card is-uploading" key={url}>
                 <img src={url} alt={`Uploading product ${index + 1}`} />

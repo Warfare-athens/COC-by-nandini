@@ -7,7 +7,7 @@ import { showGlobalStatus } from "@/app/global-status";
 import { StockRequestForm } from "@/app/components/EngagementForms";
 import UniversalSelect from "@/app/components/UniversalSelect";
 import StickyMobileBuyBar from "@/app/components/StickyMobileBuyBar";
-import { getColorSwatch, extractProductColors } from "@/lib/colors";
+import { getColorSwatch, extractProductColors, filterImagesForColor } from "@/lib/colors";
 
 type Variant = {
   id: string;
@@ -92,11 +92,11 @@ export default function DynamicProductClient({
     observer.observe(target);
     return () => observer.disconnect();
   }, []);
-  const images = [...product.product_images].sort(
+  const allImages = [...product.product_images].sort(
     (a, b) => a.sort_order - b.sort_order,
   );
-  const gallery = images.length
-    ? images
+  const fallbackGallery = allImages.length
+    ? allImages
     : [
         {
           id: "hero",
@@ -106,9 +106,22 @@ export default function DynamicProductClient({
           sort_order: 0,
         },
       ];
-  const [mainImage, setMainImage] = useState(
-    product.hero_image_url || gallery[0].url,
-  );
+
+  const { visible: gallery } = filterImagesForColor(fallbackGallery, selectedColor);
+
+  const [mainImage, setMainImage] = useState(() => {
+    const initial = filterImagesForColor(fallbackGallery, availableColors[0] || "");
+    return initial.dedicated[0]?.url || product.hero_image_url || initial.visible[0]?.url || "";
+  });
+
+  useEffect(() => {
+    const { visible, dedicated: colorDedicated } = filterImagesForColor(fallbackGallery, selectedColor);
+    if (colorDedicated.length > 0) {
+      setMainImage(colorDedicated[0].url);
+    } else if (visible.length > 0) {
+      setMainImage(visible[0].url);
+    }
+  }, [selectedColor]);
   const words = product.name.split(" ");
   const splitAt = Math.max(1, Math.ceil(words.length / 2));
   const titleLead = words.slice(0, splitAt).join(" ");

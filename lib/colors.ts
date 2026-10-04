@@ -204,3 +204,87 @@ export function extractProductColors(
 
   return Array.from(set);
 }
+
+/**
+ * Parses an image's alt_text to extract any embedded color tag and the clean alt text.
+ * E.g. "[color:Red] Front view" -> { color: "Red", altText: "Front view" }
+ * E.g. "[color:Black]" -> { color: "Black", altText: "" }
+ * E.g. "Front view" -> { color: null, altText: "Front view" }
+ */
+export function parseImageColorAndAlt(altText: string | null | undefined): {
+  color: string | null;
+  altText: string;
+} {
+  if (!altText) return { color: null, altText: "" };
+  const trimmed = altText.trim();
+  const match = trimmed.match(/^\[color:\s*([^\]]+)\]\s*(.*)$/i);
+  if (match) {
+    return {
+      color: match[1].trim(),
+      altText: match[2].trim(),
+    };
+  }
+  return { color: null, altText: trimmed };
+}
+
+/**
+ * Serializes an image's clean alt text and color assignment into the alt_text field.
+ * If color is "all", "shared", or empty, no tag is prefixed.
+ */
+export function serializeImageAltText(
+  altText: string | null | undefined,
+  color: string | null | undefined
+): string {
+  const cleanAlt = (altText || "")
+    .replace(/^\[color:\s*[^\]]+\]\s*/i, "")
+    .trim();
+  const cleanColor = (color || "").trim();
+  if (
+    cleanColor &&
+    cleanColor.toLowerCase() !== "all" &&
+    cleanColor.toLowerCase() !== "shared"
+  ) {
+    return cleanAlt ? `[color:${cleanColor}] ${cleanAlt}` : `[color:${cleanColor}]`;
+  }
+  return cleanAlt;
+}
+
+/**
+ * Filters and groups product images for a given selected color.
+ * Returns { dedicated, shared, visible }
+ */
+export function filterImagesForColor<T extends { alt_text?: string | null; color?: string | null }>(
+  images: T[],
+  selectedColor?: string | null
+): {
+  dedicated: T[];
+  shared: T[];
+  visible: T[];
+} {
+  if (!images || images.length === 0) {
+    return { dedicated: [], shared: [], visible: [] };
+  }
+
+  const selectedLower = (selectedColor || "").trim().toLowerCase();
+
+  const dedicated: T[] = [];
+  const shared: T[] = [];
+
+  for (const img of images) {
+    const declaredColor = (img.color || parseImageColorAndAlt(img.alt_text).color || "").trim();
+    if (!declaredColor || declaredColor.toLowerCase() === "all" || declaredColor.toLowerCase() === "shared") {
+      shared.push(img);
+    } else if (selectedLower && declaredColor.toLowerCase() === selectedLower) {
+      dedicated.push(img);
+    }
+  }
+
+  // If a color is selected and has dedicated photos, visible is dedicated + shared.
+  // If no dedicated photos match, visible is all images.
+  const visible = dedicated.length > 0
+    ? [...dedicated, ...shared]
+    : images;
+
+  return { dedicated, shared, visible };
+}
+

@@ -2451,6 +2451,124 @@
   font-size: 11px;
 }
 
+/* Color per Image Controls */
+.admin-image-color-select-wrap {
+  padding: 6px 8px;
+  background: #faf6f4;
+  border-top: 1px solid var(--admin-line);
+}
+
+.admin-image-color-select-wrap label {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #8c6a61;
+  margin-bottom: 3px;
+  letter-spacing: 0.06em;
+}
+
+.admin-image-color-select-wrap select,
+.admin-edit-image-color select {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 10.5px;
+  border: 1px solid #ebdcd0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #4a342f;
+  outline: none;
+  cursor: pointer;
+}
+
+.admin-image-color-select-wrap select:focus,
+.admin-edit-image-color select:focus {
+  border-color: #bb7068;
+}
+
+.admin-image-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--admin-line);
+}
+
+.admin-image-card-actions button {
+  width: 100%;
+  padding: 7px 4px;
+  font-size: 9.5px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.admin-image-card-actions button + button {
+  border-left: 1px solid var(--admin-line);
+  color: #a44840;
+}
+
+.admin-image-card-actions button.active {
+  background: #f2ddd5;
+  color: #9f5d57;
+  font-weight: 700;
+}
+
+.admin-image-color-pill {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #3a2926;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.admin-image-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.admin-hero-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  border-radius: 999px;
+  background: var(--admin-ink);
+  padding: 4px 7px;
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  z-index: 2;
+}
+
+.admin-edit-image-color {
+  padding: 7px 9px;
+  border-top: 1px solid var(--admin-line);
+  background: #faf6f4;
+}
+
+.admin-edit-image-color label {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #8c6a61;
+  margin-bottom: 3px;
+  letter-spacing: 0.06em;
+}
+
 
 
 

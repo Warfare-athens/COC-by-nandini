@@ -5,7 +5,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { addToCart } from "@/app/cart-helper";
 import { showGlobalStatus } from "@/app/global-status";
-import { mapDbProductToHomeProduct, ProductSizeOption } from "@/lib/product-mapper";
+import { mapDbProductToHomeProduct, ProductSizeOption, ProductColorOption } from "@/lib/product-mapper";
 import SizePickerPopover from "../components/SizePickerPopover";
 
 const guide = [
@@ -37,6 +37,7 @@ type ShopProduct = {
   img: string;
   href: string;
   sizes: ProductSizeOption[];
+  colors?: ProductColorOption[];
   isAccessory: boolean;
 };
 
@@ -62,6 +63,7 @@ function mapRawToShopProduct(product: Record<string, unknown>): ShopProduct {
     img: mapped.img,
     href: mapped.href,
     sizes: mapped.sizes,
+    colors: mapped.colors,
     isAccessory: mapped.isAccessory,
   };
 }
@@ -349,35 +351,96 @@ export default function ShopClient({
         </div>
         <div className="catalog-grid">
           {visible.map((p, i) => (
-            <article className="catalog-card" key={p.name}>
-              <a href={p.href}>
-                <div className="catalog-image">
-                  {p.badge && <em>{p.badge}</em>}
-                  <img
-                    src={p.img}
-                    alt={p.name}
-                    style={{ objectPosition: `${15 + (i % 6) * 11}% center` }}
-                  />
-                  <button
-                    type="button"
-                    aria-label="Add to wishlist"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleSaved(p);
-                    }}
-                  >
-                    ♡
-                  </button>
-                </div>
-                <h3>{p.name}</h3>
-                <strong>{p.price}</strong>
-              </a>
-              <SizePickerPopover product={p} />
-            </article>
+            <CatalogProductCard
+              key={p.id || p.name}
+              product={p}
+              index={i}
+              onToggleSaved={toggleSaved}
+            />
           ))}
         </div>
       </section>
     </main>
+  );
+}
+
+function CatalogProductCard({
+  product,
+  index,
+  onToggleSaved,
+}: {
+  product: ShopProduct;
+  index: number;
+  onToggleSaved: (p: ShopProduct) => void;
+}) {
+  const [activeImg, setActiveImg] = useState(product.img);
+  const [activeColor, setActiveColor] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveImg(product.img);
+  }, [product.img]);
+
+  return (
+    <article className="catalog-card">
+      <a href={product.href}>
+        <div className="catalog-image">
+          {product.badge && <em>{product.badge}</em>}
+          <img
+            src={activeImg}
+            alt={product.name}
+            style={{ objectPosition: `${15 + (index % 6) * 11}% center` }}
+          />
+          <button
+            type="button"
+            aria-label="Add to wishlist"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSaved(product);
+            }}
+          >
+            ♡
+          </button>
+        </div>
+        {product.colors && product.colors.length > 0 && (
+          <div
+            className="card-color-swatches"
+            onClick={(e) => e.preventDefault()}
+          >
+            {product.colors.slice(0, 5).map((c) => (
+              <span
+                key={c.name}
+                className={`card-color-dot ${activeColor === c.name ? "active" : ""}`}
+                style={{
+                  background: c.swatch.bg,
+                  border: c.swatch.border ? `1px solid ${c.swatch.border}` : "1px solid rgba(0,0,0,0.15)",
+                }}
+                title={c.name}
+                onMouseEnter={() => {
+                  if (c.imageUrl) {
+                    setActiveImg(c.imageUrl);
+                    setActiveColor(c.name);
+                  }
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (c.imageUrl) {
+                    setActiveImg(c.imageUrl);
+                    setActiveColor(c.name);
+                  }
+                }}
+              />
+            ))}
+            {product.colors.length > 5 && (
+              <small className="card-color-more">+{product.colors.length - 5}</small>
+            )}
+          </div>
+        )}
+        <h3>{product.name}</h3>
+        <strong>{product.price}</strong>
+      </a>
+      <SizePickerPopover product={product} />
+    </article>
   );
 }
