@@ -497,8 +497,8 @@
 .admin-save-error { margin: 0; border: 1px solid #d8877d; border-radius: 10px; background: #fff0ed; padding: 13px 15px; color: #9e382f; font-weight: 600; line-height: 1.5; }
 .admin-image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 14px;
   margin-top: 18px;
 }
 .admin-image-card {
@@ -2404,35 +2404,136 @@
 .admin-color-swatches-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
+  padding: 4px 2px;
 }
 
-.admin-swatch-pill {
+/* Cool Circular Swatches for Admin */
+.admin-swatch-circle-btn {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  padding: 2.5px;
+  background: #ffffff;
+  border: 1.5px solid #ded0c7;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border: 1px solid #ebdcd0;
-  border-radius: 999px;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  box-shadow: 0 1px 3px rgba(58, 41, 38, 0.06);
+  flex-shrink: 0;
+}
+
+.admin-swatch-circle-btn.large {
+  width: 36px;
+  height: 36px;
+  padding: 3px;
+}
+
+.admin-swatch-circle-btn:hover {
+  border-color: #bb7068;
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 4px 10px rgba(58, 41, 38, 0.12);
+  z-index: 10;
+}
+
+.admin-swatch-circle-btn.chosen {
+  border-color: transparent;
   background: #ffffff;
-  color: #6d544c;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: 0 0 0 2px #fffaf7, 0 0 0 3.5px #bb7068, 0 3px 10px rgba(187, 112, 104, 0.32);
+  transform: translateY(-1px) scale(1.06);
+  z-index: 5;
 }
 
-.admin-swatch-pill:hover {
-  background: #fbf2ec;
-  border-color: #bb7068;
-  color: #3a2926;
+.admin-swatch-circle-disc {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.14), inset 0 -1px 2px rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.admin-swatch-pill.selected {
-  background: #faece6;
-  border-color: #bb7068;
-  color: #7b3830;
+.admin-swatch-circle-disc::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+.admin-disc-all {
+  background: linear-gradient(135deg, #f4e8e1 0%, #ebd4c7 100%);
+  border: 1px dashed #b79b8f;
+  color: #733b36;
+}
+
+.admin-all-icon {
+  font-size: 13px;
+  line-height: 1;
   font-weight: 700;
-  box-shadow: 0 1px 4px rgba(187, 112, 104, 0.18);
+  color: #8c6a61;
+}
+
+.admin-swatch-check {
+  width: 11px;
+  height: 11px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  animation: swatchCheckPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.admin-swatch-circle-btn.large .admin-swatch-check {
+  width: 13px;
+  height: 13px;
+}
+
+.admin-swatch-tooltip {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #2b1d19;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 3px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(43, 29, 25, 0.3);
+  z-index: 50;
+}
+
+.admin-swatch-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px 4px 0 4px;
+  border-style: solid;
+  border-color: #2b1d19 transparent transparent transparent;
+}
+
+.admin-swatch-circle-btn:hover .admin-swatch-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 .admin-custom-color-row {
@@ -2451,39 +2552,51 @@
   font-size: 11px;
 }
 
-/* Color per Image Controls */
-.admin-image-color-select-wrap {
-  padding: 6px 8px;
+/* Image Card Color Selector Controls */
+.admin-image-color-selector {
+  padding: 8px 10px;
   background: #faf6f4;
   border-top: 1px solid var(--admin-line);
 }
 
-.admin-image-color-select-wrap label {
-  display: block;
+.admin-image-color-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.admin-image-color-header label {
   font-size: 8.5px;
   font-weight: 700;
   text-transform: uppercase;
   color: #8c6a61;
-  margin-bottom: 3px;
   letter-spacing: 0.06em;
+  margin: 0;
 }
 
-.admin-image-color-select-wrap select,
-.admin-edit-image-color select {
-  width: 100%;
-  padding: 4px 6px;
-  font-size: 10.5px;
-  border: 1px solid #ebdcd0;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #4a342f;
-  outline: none;
-  cursor: pointer;
+.admin-image-color-current {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #9f5d57;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.admin-image-color-select-wrap select:focus,
-.admin-edit-image-color select:focus {
-  border-color: #bb7068;
+.admin-image-color-swatches {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.admin-image-no-colors {
+  font-size: 9px;
+  color: #9f867c;
+  line-height: 1.3;
+  margin: 4px 0 0 0;
 }
 
 .admin-image-card-actions {

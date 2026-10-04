@@ -722,27 +722,100 @@ export default function AdminProductForm() {
               const swatch = assigned ? getColorSwatch(assigned) : null;
               return (
                 <div className="admin-image-card" key={url}>
-                  <img src={url} alt={`Uploaded product ${index + 1}`} />
+                  <div style={{ position: "relative" }}>
+                    <img src={url} alt={`Uploaded product ${index + 1}`} />
+                    {index === 0 && <small>HERO</small>}
+                    {assigned && swatch && (
+                      <span className="admin-image-color-pill">
+                        <span
+                          className="admin-image-color-dot"
+                          style={{
+                            background: swatch.bg,
+                            border: swatch.border ? `1px solid ${swatch.border}` : "none",
+                          }}
+                        />
+                        {assigned}
+                      </span>
+                    )}
+                  </div>
                   <div className="admin-image-card-footer">
-                    <div className="admin-image-color-select-wrap">
-                      <label>Colour</label>
-                      <select
-                        value={assigned}
-                        onChange={(e) =>
-                          setImageColors((prev) => ({
-                            ...prev,
-                            [url]: e.target.value,
-                          }))
-                        }
-                        aria-label="Assign colour to photo"
-                      >
-                        <option value="">All Colours (Shared)</option>
-                        {generated.colors.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="admin-image-color-selector">
+                      <div className="admin-image-color-header">
+                        <label>Colour</label>
+                        <span className="admin-image-color-current" title={assigned || "All Colours (Shared)"}>
+                          {assigned ? assigned : "All Colours"}
+                        </span>
+                      </div>
+                      <div className="admin-image-color-swatches">
+                        <button
+                          type="button"
+                          className={`admin-swatch-circle-btn ${!assigned ? "chosen" : ""}`}
+                          onClick={() =>
+                            setImageColors((prev) => ({
+                              ...prev,
+                              [url]: "",
+                            }))
+                          }
+                          title="All Colours (Shared across all variants)"
+                          aria-label="All Colours (Shared)"
+                        >
+                          <span className="admin-swatch-circle-disc admin-disc-all">
+                            {!assigned ? (
+                              <svg className="admin-swatch-check" viewBox="0 0 12 12" fill="none">
+                                <path d="M2.5 6.2L4.8 8.5L9.5 3.5" stroke="#733b36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            ) : (
+                              <span className="admin-all-icon">∞</span>
+                            )}
+                          </span>
+                          <span className="admin-swatch-tooltip">All Colours (Shared)</span>
+                        </button>
+                        {generated.colors.map((colorName) => {
+                          const cSwatch = getColorSwatch(colorName);
+                          const isChosen = (assigned || "").toLowerCase() === colorName.toLowerCase();
+                          return (
+                            <button
+                              type="button"
+                              key={colorName}
+                              className={`admin-swatch-circle-btn ${isChosen ? "chosen" : ""}`}
+                              onClick={() =>
+                                setImageColors((prev) => ({
+                                  ...prev,
+                                  [url]: colorName,
+                                }))
+                              }
+                              title={colorName}
+                              aria-label={`Assign to ${colorName}`}
+                            >
+                              <span
+                                className="admin-swatch-circle-disc"
+                                style={{
+                                  background: cSwatch.bg,
+                                  border: cSwatch.border ? `1px solid ${cSwatch.border}` : "1px solid rgba(0,0,0,0.12)",
+                                }}
+                              >
+                                {isChosen && (
+                                  <svg className="admin-swatch-check" viewBox="0 0 12 12" fill="none">
+                                    <path
+                                      d="M2.5 6.2L4.8 8.5L9.5 3.5"
+                                      stroke={cSwatch.isLight ? "#2a1c18" : "#ffffff"}
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                )}
+                              </span>
+                              <span className="admin-swatch-tooltip">{colorName}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {generated.colors.length === 0 && (
+                        <p className="admin-image-no-colors">
+                          Pick colours below to assign photos to specific shades.
+                        </p>
+                      )}
                     </div>
                     <div className="admin-image-card-actions">
                       <button
@@ -1019,6 +1092,7 @@ export default function AdminProductForm() {
                   <small>Quick Pick Boutique Shades</small>
                   <div className="admin-color-swatches-grid">
                     {POPULAR_PRODUCT_COLORS.map((item) => {
+                      const swatch = getColorSwatch(item.name);
                       const isSelected = generated.colors.some(
                         (c) => c.toLowerCase() === item.name.toLowerCase()
                       );
@@ -1026,20 +1100,31 @@ export default function AdminProductForm() {
                         <button
                           key={item.name}
                           type="button"
-                          className={`admin-swatch-pill ${isSelected ? "selected" : ""}`}
+                          className={`admin-swatch-circle-btn large ${isSelected ? "chosen" : ""}`}
                           onClick={() => toggleColor(item.name)}
                           title={item.name}
+                          aria-label={`Toggle colour ${item.name}`}
                         >
                           <span
-                            className="admin-color-swatch-dot"
+                            className="admin-swatch-circle-disc"
                             style={{
-                              width: "10px",
-                              height: "10px",
-                              background: item.hex,
-                              border: item.border ? `1px solid ${item.border}` : "none",
+                              background: swatch.bg,
+                              border: swatch.border ? `1px solid ${swatch.border}` : "1px solid rgba(0,0,0,0.12)",
                             }}
-                          />
-                          <span>{item.name}</span>
+                          >
+                            {isSelected && (
+                              <svg className="admin-swatch-check" viewBox="0 0 12 12" fill="none">
+                                <path
+                                  d="M2.5 6.2L4.8 8.5L9.5 3.5"
+                                  stroke={swatch.isLight ? "#2a1c18" : "#ffffff"}
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            )}
+                          </span>
+                          <span className="admin-swatch-tooltip">{item.name}</span>
                         </button>
                       );
                     })}
