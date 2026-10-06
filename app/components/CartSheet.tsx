@@ -455,14 +455,14 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
                 </button>
                 <div className="mt-5 flex flex-wrap justify-center gap-2">
                   <a
-                    href="/collections/dresses"
+                    href="/shop?category=Dresses"
                     onClick={onClose}
                     className="rounded-full border border-[#ebdcd0] bg-white px-3 py-1 text-[11px] font-medium text-[#7d675e] transition hover:border-[#b56560] hover:text-[#b56560]"
                   >
                     Dresses
                   </a>
                   <a
-                    href="/collections/co-ord-sets"
+                    href="/shop?category=Co-ord%20Sets"
                     onClick={onClose}
                     className="rounded-full border border-[#ebdcd0] bg-white px-3 py-1 text-[11px] font-medium text-[#7d675e] transition hover:border-[#b56560] hover:text-[#b56560]"
                   >

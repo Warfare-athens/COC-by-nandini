@@ -470,6 +470,7 @@ export default function AdminProductForm() {
       !generated.sku && "SKU",
       !generated.shortDescription && "short description",
       !generated.description && "full description",
+      generated.description.length > 100 && "full description under 100 characters",
       !generated.category && "category",
       !generated.occasions.length && "Everyday or Party Wear",
       !cleanSizeInventory.length && "at least one size",
@@ -925,8 +926,10 @@ export default function AdminProductForm() {
               <label>Full description</label>
               <textarea
                 value={generated.description}
+                maxLength={100}
                 onChange={(event) => update("description", event.target.value)}
               />
+              <small className="admin-field-hint">{generated.description.length}/100 characters</small>
             </div>
             <div className="admin-field"><label>Category</label><UniversalSelect value={generated.category} onChange={(event) => setGenerated((current) => ({ ...current, category: event.target.value, subcategory: "" }))} required><option value="">Select category</option>{PRODUCT_CATEGORIES.map((value) => <option key={value}>{value}</option>)}</UniversalSelect></div>
             <div className="admin-field"><label>Subcategory</label><UniversalSelect value={generated.subcategory} onChange={(event) => update("subcategory", event.target.value)} disabled={!generated.category || !(PRODUCT_TAXONOMY[generated.category as keyof typeof PRODUCT_TAXONOMY]?.length)}><option value="">None</option>{generated.category && PRODUCT_TAXONOMY[generated.category as keyof typeof PRODUCT_TAXONOMY]?.map((value) => <option key={value}>{value}</option>)}</UniversalSelect></div>

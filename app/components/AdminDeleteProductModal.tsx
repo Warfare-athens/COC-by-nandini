@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trash2, AlertTriangle, X, Loader2 } from "lucide-react";
 import { showGlobalStatus } from "@/app/global-status";
 
@@ -27,14 +27,47 @@ export default function AdminDeleteProductModal({
 }: AdminDeleteProductModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
-  // Reset state when opening
+  // Reset state after the modal has committed. Deferring avoids a cascading
+  // render while preserving a clean confirmation state for every product.
   useEffect(() => {
     if (isOpen) {
-      setIsDeleting(false);
-      setError("");
+      restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const timer = window.setTimeout(() => {
+        setIsDeleting(false);
+        setError("");
+        closeButtonRef.current?.focus();
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
+    return undefined;
   }, [isOpen, product?.id]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const dialog = document.querySelector<HTMLElement>("[data-admin-delete-dialog]");
+      if (!dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", trap);
+    return () => document.removeEventListener("keydown", trap);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen || !restoreFocusRef.current) return;
+    const element = restoreFocusRef.current;
+    restoreFocusRef.current = null;
+    window.setTimeout(() => element.focus(), 0);
+  }, [isOpen]);
 
   // Handle ESC key press
   useEffect(() => {
@@ -90,6 +123,8 @@ export default function AdminDeleteProductModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+        data-admin-delete-dialog
       >
         <div className="admin-delete-modal-head">
           <div className="admin-delete-modal-title-group">
@@ -102,6 +137,7 @@ export default function AdminDeleteProductModal({
             </div>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             className="admin-delete-modal-close"
             onClick={onClose}
@@ -135,7 +171,7 @@ export default function AdminDeleteProductModal({
             </div>
           </div>
 
-          <div className="admin-delete-warning-box">
+          <div className="admin-delete-warning-box" id="delete-dialog-description">
             <AlertTriangle size={18} className="admin-delete-warning-icon" />
             <p>
               Are you sure you want to permanently delete <strong>{product.name}</strong>?
@@ -145,7 +181,7 @@ export default function AdminDeleteProductModal({
           </div>
 
           {error && (
-            <div className="admin-delete-error-box" role="alert">
+            <div className="admin-delete-error-box" role="alert" aria-live="assertive">
               <strong>Error:</strong> {error}
             </div>
           )}

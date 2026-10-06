@@ -32,7 +32,8 @@ export async function setAdminCookie() {
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    // Keep the admin signed in for 30 days unless they explicitly log out.
+    maxAge: 60 * 60 * 24 * 30,
   });
 }
 

@@ -738,11 +738,6 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {/* Compact Trust Note */}
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-[#ebdcd0] bg-white/80 py-2.5 px-4 text-[11px] text-[#7d675e] shadow-2xs">
-            <Lock size={12} className="text-[#ba6a64]" />
-            <span>Prepaid online checkout powered by Razorpay · 256-bit SSL encrypted</span>
-          </div>
         </div>
 
         {/* Aside: Sticky Order summary */}

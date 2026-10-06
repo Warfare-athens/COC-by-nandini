@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Archive, Bell, CheckSquare, Copy, RotateCcw, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import UniversalSelect from "./UniversalSelect";
 import AdminDeleteProductModal, { DeleteModalProduct } from "./AdminDeleteProductModal";
 
@@ -14,6 +14,7 @@ export type AdminCatalogProduct = {
   heroImageUrl: string;
   category: string;
   inventory: number;
+  lowStock: boolean;
   featured: boolean;
   newArrival: boolean;
   bestSeller: boolean;
@@ -26,14 +27,12 @@ export default function AdminProductCatalog({ products }: { products: AdminCatal
   const [status, setStatus] = useState("all");
   const [category, setCategory] = useState("all");
   const [stock, setStock] = useState("all");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState<string | null>(null);
 
   const [productToDelete, setProductToDelete] = useState<DeleteModalProduct | null>(null);
   const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
-
-  // Sync if initial products array changes
-  useEffect(() => {
-    setProductList(products);
-  }, [products]);
 
   const categories = useMemo(
     () => [...new Set(productList.map((product) => product.category))].sort(),
@@ -52,6 +51,7 @@ export default function AdminProductCatalog({ products }: { products: AdminCatal
         if (category !== "all" && product.category !== category) return false;
         if (stock === "in" && product.inventory <= 0) return false;
         if (stock === "out" && product.inventory > 0) return false;
+        if (stock === "low" && !product.lowStock) return false;
         return true;
       }),
     [category, productList, query, status, stock],
@@ -69,6 +69,30 @@ export default function AdminProductCatalog({ products }: { products: AdminCatal
     setTimeout(() => setDeleteNotice(null), 5000);
   };
 
+  const selectedVisible = visible.filter((product) => selected.includes(product.id));
+  const lowStockCount = productList.filter((product) => product.lowStock).length;
+  const outOfStockCount = productList.filter((product) => product.inventory <= 0).length;
+  const allVisibleSelected = visible.length > 0 && selectedVisible.length === visible.length;
+  const toggleSelected = (id: string) => setSelected((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const toggleAllVisible = () => setSelected((current) => allVisibleSelected ? current.filter((id) => !visible.some((product) => product.id === id)) : [...new Set([...current, ...visible.map((product) => product.id)])]);
+  const bulkAction = async (action: "archive" | "restore" | "duplicate") => {
+    if (!selected.length || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      const response = await fetch("/api/admin/products/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ids: action === "duplicate" ? [selected[0]] : selected }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to update products.");
+      setBulkNotice(action === "duplicate" ? "Product duplicated as a draft." : `${payload.updated || selected.length} product${(payload.updated || selected.length) === 1 ? "" : "s"} ${action === "archive" ? "archived" : "restored"}.`);
+      setSelected([]);
+      router.refresh();
+    } catch (error) {
+      setBulkNotice(error instanceof Error ? error.message : "Unable to update products.");
+    } finally {
+      setBulkBusy(false);
+      window.setTimeout(() => setBulkNotice(null), 5000);
+    }
+  };
+
   return (
     <>
       {deleteNotice && (
@@ -84,6 +108,7 @@ export default function AdminProductCatalog({ products }: { products: AdminCatal
           </button>
         </div>
       )}
+      {bulkNotice && <div className="admin-notice admin-product-delete-notice" role="status"><span>{bulkNotice}</span><button type="button" className="admin-notice-dismiss" onClick={() => setBulkNotice(null)} aria-label="Dismiss notice">×</button></div>}
 
       <div className="admin-product-toolbar">
         <label className="admin-search-field">
@@ -128,18 +153,26 @@ export default function AdminProductCatalog({ products }: { products: AdminCatal
           >
             <option value="all">All stock</option>
             <option value="in">In stock</option>
+            <option value="low">Low stock</option>
             <option value="out">Out of stock</option>
           </UniversalSelect>
         </div>
       </div>
 
       <div className="admin-product-count">
-        Showing <b>{visible.length}</b> of {productList.length} products
+        Showing <b>{visible.length}</b> of {productList.length} products{selected.length ? <> · <b>{selected.length}</b> selected</> : null}
+      </div>
+      {(lowStockCount > 0 || outOfStockCount > 0) && <div className="admin-product-stock-alerts" role="status"><Bell size={15} /><span><b>{lowStockCount}</b> low-stock · <b>{outOfStockCount}</b> out of stock</span><button type="button" onClick={() => setStock("low")}>Review low stock</button></div>}
+
+      <div className="admin-product-bulk-bar">
+        <button type="button" className="admin-small-button" onClick={toggleAllVisible} disabled={!visible.length}><CheckSquare size={15} />{allVisibleSelected ? "Clear visible" : "Select visible"}</button>
+        {selected.length > 0 && <><button type="button" className="admin-small-button" onClick={() => bulkAction("archive")} disabled={bulkBusy}><Archive size={15} />Archive</button><button type="button" className="admin-small-button" onClick={() => bulkAction("restore")} disabled={bulkBusy}><RotateCcw size={15} />Restore</button><button type="button" className="admin-small-button" onClick={() => bulkAction("duplicate")} disabled={bulkBusy || selected.length !== 1}><Copy size={15} />Duplicate</button></>}
       </div>
 
       <section className="admin-product-catalog">
         {visible.map((product) => (
           <div className="admin-product-card" key={product.id}>
+            <label className="admin-product-select"><input type="checkbox" checked={selected.includes(product.id)} onChange={() => toggleSelected(product.id)} aria-label={`Select ${product.name}`} /></label>
             <div className="admin-product-card-media-wrap">
               <a
                 className="admin-product-card-image"
@@ -157,6 +190,7 @@ export default function AdminProductCatalog({ products }: { products: AdminCatal
                 {product.status !== "active" && (
                   <span className="admin-product-draft">{product.status}</span>
                 )}
+                {product.lowStock && product.status === "active" && <span className="admin-product-low-stock"><Bell size={12} />Low stock</span>}
               </a>
               <button
                 type="button"
@@ -193,7 +227,7 @@ export default function AdminProductCatalog({ products }: { products: AdminCatal
                 <div className="admin-product-pricing-block">
                   <b>₹{product.price.toLocaleString("en-IN")}</b>
                   <small className={product.inventory > 0 ? "is-stocked" : "is-empty"}>
-                    {product.inventory > 0 ? `${product.inventory} in stock` : "Out of stock"}
+                    {product.inventory > 0 ? `${product.inventory} in stock${product.lowStock ? " · Low" : ""}` : "Out of stock"}
                   </small>
                 </div>
 

@@ -6,7 +6,10 @@ export function AdminBreadcrumbs({ items }: { items: Array<{ label: string; href
 }
 
 export function AdminPageHeader({ eyebrow, title, actions, children }: { eyebrow?: string; title: string; actions?: ReactNode; children?: ReactNode }) {
-  return <header className="admin-page-header"><div>{eyebrow && <span className="admin-page-eyebrow">{eyebrow}</span>}<h1>{title}</h1>{children && <div className="admin-page-summary">{children}</div>}</div>{actions && <div className="admin-page-actions">{actions}</div>}</header>;
+  return <>
+    {title !== "Overview" && <AdminBreadcrumbs items={[{ label: "Overview", href: "/admin" }, { label: title }]} />}
+    <header className="admin-page-header"><div>{eyebrow && <span className="admin-page-eyebrow">{eyebrow}</span>}<h1>{title}</h1>{children && <div className="admin-page-summary">{children}</div>}</div>{actions && <div className="admin-page-actions">{actions}</div>}</header>
+  </>;
 }
 
 export function AdminStatCard({ label, value, note, tone = "default", icon }: { label: string; value: ReactNode; note?: ReactNode; tone?: "default" | "success" | "warning" | "danger"; icon?: ReactNode }) {

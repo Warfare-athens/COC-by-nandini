@@ -381,11 +381,16 @@ export async function adminDashboardData(days = 30) {
   const since = new Date(Date.now() - Math.max(1, Math.min(days, 90)) * 86_400_000).toISOString();
   const [ordersResult, productsResult, cartsResult, eventsResult, lowStockResult] = await Promise.all([
     supabase.from("orders").select("id,order_number,email,status,payment_status,payment_method,fulfillment_status,total_inr,placed_at").gte("placed_at", since).order("placed_at", { ascending: false }).limit(5000),
-    supabase.from("products").select("id,name,slug,status,price_inr,compare_at_price_inr,hero_image_url,tags,is_best_seller,is_new_arrival,is_featured,updated_at,product_variants(inventory_quantity),product_categories(categories(name))").order("updated_at", { ascending: false }).limit(200),
+    supabase.from("products").select("id,name,slug,status,price_inr,compare_at_price_inr,hero_image_url,tags,is_best_seller,is_new_arrival,is_featured,updated_at,product_variants(inventory_quantity,low_stock_threshold),product_categories(categories(name))").order("updated_at", { ascending: false }).limit(200),
     supabase.from("carts").select("id,anonymous_token,email,phone,status,last_activity_at,cart_items(quantity,products(price_inr))").gte("last_activity_at", since).order("last_activity_at", { ascending: false }).limit(5000),
     supabase.from("commerce_events").select("anonymous_id,event_name,created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(10000),
     supabase.from("product_variants").select("id", { count: "exact", head: true }).eq("is_active", true).lte("inventory_quantity", 3),
   ]);
+
+  const queryError = [ordersResult, productsResult, cartsResult, eventsResult, lowStockResult]
+    .map((result) => result.error)
+    .find(Boolean);
+  if (queryError) throw queryError;
 
   const orders = (ordersResult.data || []) as Record<string, unknown>[];
   const carts = (cartsResult.data || []) as Record<string, unknown>[];

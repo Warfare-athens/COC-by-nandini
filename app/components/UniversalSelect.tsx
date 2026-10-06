@@ -157,7 +157,7 @@ export default function UniversalSelect({
         aria-controls={`${selectId}-listbox`}
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label={ariaLabel}
+        aria-label={ariaLabel || selectedOption?.label || "Select an option"}
         aria-labelledby={ariaLabelledBy}
         className={[styles.trigger, className].filter(Boolean).join(" ")}
         disabled={disabled}
@@ -170,10 +170,11 @@ export default function UniversalSelect({
         <ChevronDown className={styles.icon} size={16} strokeWidth={1.8} aria-hidden="true" />
       </button>
       {open && (
-        <span className={styles.menu} id={`${selectId}-listbox`} role="listbox" aria-label={ariaLabel}>
+        <span className={styles.menu} id={`${selectId}-listbox`} role="listbox" aria-label={ariaLabel || "Options"} aria-activedescendant={`${selectId}-option-${activeIndex}`}>
           {options.map((option, index) => (
             <button
               aria-selected={option.value === selectedValue}
+              id={`${selectId}-option-${index}`}
               className={[
                 styles.option,
                 option.value === selectedValue ? styles.selected : "",

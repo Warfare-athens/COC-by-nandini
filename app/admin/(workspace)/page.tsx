@@ -1,5 +1,7 @@
 import AdminDashboardControls from "@/app/components/AdminDashboardControls";
 import { adminDashboardData } from "@/lib/commerce";
+import { ChartNoAxesCombined, CircleCheck, ShoppingBag, Target, TriangleAlert, TrendingUp } from "lucide-react";
+import type { ReactNode } from "react";
 
 type OrderRow = {
   id: string;
@@ -13,7 +15,7 @@ type OrderRow = {
 const money = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 const percent = (value: number) => `${value.toFixed(1)}%`;
 
-function MetricCard({ label, value, note, tone = "default", icon }: { label: string; value: string; note: string; tone?: "default" | "warning" | "success"; icon: string }) {
+function MetricCard({ label, value, note, tone = "default", icon }: { label: string; value: string; note: string; tone?: "default" | "warning" | "success"; icon: ReactNode }) {
   return <article className={`command-metric is-${tone}`}><div><span>{label}</span><i aria-hidden="true">{icon}</i></div><strong>{value}</strong><small>{note}</small></article>;
 }
 
@@ -48,15 +50,15 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
         {!data.configured && <div className="command-alert">Supabase is not connected. Add the database environment variables to activate live reporting.</div>}
 
         <div className="command-metrics">
-          <MetricCard label="Revenue" value={money(data.revenue)} note={`${data.orderCount} non-cancelled orders`} icon="↗︎" />
-          <MetricCard label="Average order" value={money(data.averageOrder)} note={`${data.deliveredOrders} delivered orders`} icon="▣" />
-          <MetricCard label="Abandoned value" value={money(data.abandonedValue)} note={`${data.recoverableCarts} recoverable cart leads`} tone="warning" icon="△" />
-          <MetricCard label="Conversion" value={percent(data.conversion)} note={`${data.visitors} visitors to ${data.orderCount} orders`} tone="success" icon="◎" />
+          <MetricCard label="Revenue" value={money(data.revenue)} note={`${data.orderCount} non-cancelled orders`} icon={<TrendingUp size={18} />} />
+          <MetricCard label="Average order" value={money(data.averageOrder)} note={`${data.deliveredOrders} delivered orders`} icon={<ShoppingBag size={18} />} />
+          <MetricCard label="Abandoned value" value={money(data.abandonedValue)} note={`${data.recoverableCarts} recoverable cart lead${data.recoverableCarts === 1 ? "" : "s"}`} tone="warning" icon={<TriangleAlert size={18} />} />
+          <MetricCard label="Conversion" value={percent(data.conversion)} note={`${data.visitors} visitors to ${data.orderCount} orders`} tone="success" icon={<Target size={18} />} />
         </div>
 
         <div className="command-work-grid">
           <section className="command-panel">
-            <div className="command-panel-head"><div><h2>Morning Run List</h2><p>The jobs that move money today.</p></div><span aria-hidden="true">◇</span></div>
+            <div className="command-panel-head"><div><h2>Morning Run List</h2><p>The jobs that move money today.</p></div><span aria-hidden="true"><CircleCheck size={18} /></span></div>
             <div className="command-run-list">
               <RunItem href="/admin/cart-leads" title="Recover checkout leads" note={`${money(data.abandonedValue)} recoverable value`} value={String(data.recoverableCarts)} tone="warning" />
               <RunItem href="/admin/orders" title="Move open orders" note="Confirmed, processing, or shipped orders still active" value={String(data.openOrders)} tone="success" />
@@ -66,7 +68,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
           </section>
 
           <section className="command-panel">
-            <div className="command-panel-head"><div><h2>Conversion Funnel</h2><p>Where demand turns into orders.</p></div><span aria-hidden="true">⌁</span></div>
+            <div className="command-panel-head"><div><h2>Conversion Funnel</h2><p>Where demand turns into orders.</p></div><span aria-hidden="true"><ChartNoAxesCombined size={18} /></span></div>
             <div className="command-funnel">
               <FunnelRow label="Visitors" value={data.visitors} width={data.visitors / funnelMax * 100} />
               <FunnelRow label="Cart visitors" value={data.cartVisitors} width={data.cartVisitors / funnelMax * 100} />

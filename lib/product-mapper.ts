@@ -20,6 +20,9 @@ export type HomeProduct = {
   price: string;
   img: string;
   badge: string;
+  isBestSeller: boolean;
+  isNewArrival: boolean;
+  isFeatured: boolean;
   href: string;
   position: string;
   sizes: ProductSizeOption[];
@@ -128,6 +131,9 @@ export function mapDbProductToHomeProduct(product: Record<string, unknown>): Hom
         : product.is_featured
           ? "Featured"
           : "",
+    isBestSeller: Boolean(product.is_best_seller),
+    isNewArrival: Boolean(product.is_new_arrival),
+    isFeatured: Boolean(product.is_featured),
     href: `/product/${String(product.slug)}`,
     position: "50%",
     sizes,

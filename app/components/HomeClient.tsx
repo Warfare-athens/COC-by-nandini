@@ -86,7 +86,10 @@ export default function HomeClient({ initialProducts = [] }: { initialProducts?:
 
   const shownProducts = useMemo(() => {
     if (activeCategory === "All") return products;
-    const filtered = products.filter((p) => p.categories.includes(activeCategory));
+    const selected = activeCategory.trim().toLowerCase();
+    const filtered = products.filter((p) =>
+      p.categories.some((category) => category.trim().toLowerCase() === selected),
+    );
     return filtered.length > 0 ? filtered : products;
   }, [activeCategory, products]);
 
@@ -107,12 +110,12 @@ export default function HomeClient({ initialProducts = [] }: { initialProducts?:
       {
         id: "best-sellers",
         label: "BEST SELLERS",
-        products: showcaseProducts.filter((product) => product.badge !== "New"),
+        products: showcaseProducts.filter((product) => product.isBestSeller),
       },
       {
         id: "new-arrivals",
         label: "NEW ARRIVALS",
-        products: showcaseProducts.filter((product) => product.badge === "New"),
+        products: showcaseProducts.filter((product) => product.isNewArrival),
       },
     ],
     [showcaseProducts],
@@ -941,6 +944,22 @@ export default function HomeClient({ initialProducts = [] }: { initialProducts?:
                     ♡
                   </button>
                 </div>
+                {p.colors && p.colors.length > 0 && (
+                  <div className="card-color-swatches home-card-swatches" aria-label={`${p.colors.length} available colours`}>
+                    {p.colors.slice(0, 5).map((c) => (
+                      <span
+                        key={c.name}
+                        className="card-color-dot"
+                        style={{
+                          background: c.swatch.bg,
+                          border: c.swatch.border ? `1px solid ${c.swatch.border}` : undefined,
+                        }}
+                        title={c.name}
+                      />
+                    ))}
+                    {p.colors.length > 5 && <small className="card-color-more">+{p.colors.length - 5}</small>}
+                  </div>
+                )}
                 <div className="product-info">
                   <h3>{p.name}</h3>
                   <strong>{p.price}</strong>

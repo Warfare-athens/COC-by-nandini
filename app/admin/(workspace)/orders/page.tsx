@@ -1,6 +1,6 @@
 import AdminOrderControl from "@/app/components/AdminOrderControl";
 import { WhatsAppOrderButton } from "@/app/components/AdminOrderDetailForm";
-import { AdminDataTable } from "@/app/components/AdminUI";
+import { AdminDataTable, AdminPageHeader } from "@/app/components/AdminUI";
 import { commerceConfigured, getSupabaseAdmin } from "@/db";
 
 type OrderRow = {
@@ -18,39 +18,38 @@ type OrderRow = {
 export default async function AdminOrdersPage() {
   let orders: OrderRow[] = [];
   if (commerceConfigured()) {
-    const { data } = await getSupabaseAdmin()
+    const { data, error } = await getSupabaseAdmin()
       .from("orders")
       .select(
         "id,order_number,email,phone,status,payment_status,fulfillment_status,total_inr,placed_at",
       )
       .order("placed_at", { ascending: false })
       .limit(100);
+    if (error) throw new Error(`Unable to load orders: ${error.message}`);
     orders = (data || []) as OrderRow[];
   }
+  const paymentLabel = (status: string) => ({ paid: "Paid", failed: "Failed", payment_pending: "Awaiting payment", pending: "Awaiting payment" }[status] || status.replaceAll("_", " "));
+  const isTestEmail = (email: string) => /(^|[_-])(test|cod)[_-]|@example\.com$/i.test(email);
   return (
     <>
-      <div className="admin-head">
-        <div><h1>Orders</h1><p>Review payments, fulfillment, customer details, and delivery progress.</p></div>
-      </div>
+      <AdminPageHeader title="Orders">Review payments, fulfillment, customer details, and delivery progress.</AdminPageHeader>
       <section className="admin-panel">
-        <AdminDataTable columns={["Order", "Customer", "Payment", "Total", "Fulfillment", "Open"]}>
+        <AdminDataTable columns={["Order", "Placed", "Customer", "Payment", "Total", "Fulfillment", "Open"]}>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td>
+                <td data-label="Order">
                   <strong>{order.order_number}</strong>
-                  <br />
-                  <small>
-                    {new Date(order.placed_at).toLocaleString("en-IN")}
-                  </small>
                 </td>
-                <td>
+                <td data-label="Placed" data-date={order.placed_at}><small>{new Date(order.placed_at).toLocaleString("en-IN")}</small></td>
+                <td data-label="Customer">
                   {order.email}
+                  {isTestEmail(order.email) && <span className="admin-status warn" style={{ display: "inline-flex", marginLeft: 6 }}>Test data</span>}
                   <br />
                   <small>{order.phone}</small>
                 </td>
-                <td>
+                <td data-label="Payment">
                   <span className={`admin-status ${order.payment_status === "paid" ? "good" : order.payment_status === "failed" ? "bad" : "warn"}`}>
-                    {order.payment_status === "paid" ? "Paid" : order.payment_status === "failed" ? "Failed" : "Awaiting Payment"}
+                    {paymentLabel(order.payment_status)}
                   </span>
                   {order.status === "pending_payment" && (
                     <small className="admin-row-sub" style={{ display: "block", color: "#b76e00", fontWeight: 600 }}>
@@ -58,14 +57,14 @@ export default async function AdminOrdersPage() {
                     </small>
                   )}
                 </td>
-                <td>₹{Number(order.total_inr).toLocaleString("en-IN")}</td>
-                <td>
+                <td data-label="Total">₹{Number(order.total_inr).toLocaleString("en-IN")}</td>
+                <td data-label="Fulfillment">
                   <AdminOrderControl
                     id={order.id}
                     current={order.fulfillment_status}
                   />
                 </td>
-                <td>
+                <td data-label="Open">
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                     <a className="admin-small-button" href={`/admin/orders/${order.id}`}>Details</a>
                     <WhatsAppOrderButton
@@ -79,7 +78,7 @@ export default async function AdminOrdersPage() {
             ))}
             {!orders.length && (
               <tr>
-                <td colSpan={6}>No orders yet.</td>
+                <td colSpan={7}>No orders yet.</td>
               </tr>
             )}
         </AdminDataTable>

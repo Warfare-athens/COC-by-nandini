@@ -75,6 +75,7 @@ export default function ShopClient({
 }) {
   const pageRef = useRef<HTMLElement>(null);
   const [active, setActive] = useState("All collections");
+  const [activeSubcategory, setActiveSubcategory] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [sortBy, setSortBy] =
@@ -129,7 +130,15 @@ export default function ShopClient({
     const filtered =
       active === "All collections"
         ? [...products]
-        : products.filter((product) => product.categories.includes(active));
+        : products.filter((product) => {
+            const matchesCategory = product.categories.some(
+              (category) => category.trim().toLowerCase() === active.trim().toLowerCase(),
+            );
+            const matchesSubcategory = !activeSubcategory || product.categories.some(
+              (category) => category.trim().toLowerCase() === activeSubcategory.trim().toLowerCase(),
+            );
+            return matchesCategory && matchesSubcategory;
+          });
     const price = (value: string) => Number(value.replace(/[^0-9]/g, ""));
     if (sortBy === "newest")
       return filtered.sort(
@@ -142,10 +151,11 @@ export default function ShopClient({
     if (sortBy === "name")
       return filtered.sort((a, b) => a.name.localeCompare(b.name));
     return filtered;
-  }, [active, sortBy, products]);
+  }, [active, activeSubcategory, sortBy, products]);
 
   const selectCategory = (category: string) => {
     setActive(category);
+    setActiveSubcategory("");
     setFilterOpen(false);
   };
 
@@ -160,6 +170,7 @@ export default function ShopClient({
       const params = new URLSearchParams(window.location.search);
       const cat = params.get("category");
       const occasion = params.get("occasion");
+      const sub = params.get("subcategory");
       if (occasion) initialCategory = decodeURIComponent(occasion);
       if (cat) {
         const decoded = decodeURIComponent(cat);
@@ -174,6 +185,7 @@ export default function ShopClient({
           initialCategory = decoded;
         }
       }
+      if (sub) setActiveSubcategory(decodeURIComponent(sub));
     }
     if (!initialCategory) return;
     const initialLoad = window.setTimeout(() => setActive(initialCategory), 0);
@@ -255,10 +267,6 @@ export default function ShopClient({
           <h2>
             Shop by <i>category</i>
           </h2>
-          <p>
-            Every piece is chosen to help you build a wardrobe that feels
-            unmistakably yours.
-          </p>
           <div className="mobile-shop-controls">
             <button
               className="mobile-filter-toggle"
@@ -303,7 +311,7 @@ export default function ShopClient({
             </div>
             <b>→</b>
           </button>
-          {guide.map(([title, text]) => (
+          {guide.map(([title]) => (
             <button
               className={active === title ? "selected" : ""}
               onClick={() => selectCategory(title)}
@@ -317,7 +325,6 @@ export default function ShopClient({
               </span>
               <div>
                 <strong>{title}</strong>
-                <small>{text}</small>
               </div>
               <b>→</b>
             </button>
@@ -345,7 +352,7 @@ export default function ShopClient({
         <div className="catalog-head">
           <div>
             <span className="eyebrow">{active.toUpperCase()}</span>
-            <h2>{active === "All collections" ? "All collections" : active}</h2>
+            <h2>{activeSubcategory || (active === "All collections" ? "All collections" : active)}</h2>
           </div>
           <span className="count">{visible.length} pieces</span>
         </div>
