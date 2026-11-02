@@ -30,7 +30,7 @@ const editSchema = z.object({
   sku: z.string().min(1),
   status: z.enum(["draft", "active", "archived"]),
   short_description: z.string().max(100, "Short description must be 100 characters or fewer.").nullable(),
-  description: z.string().max(100, "Full description must be 100 characters or fewer.").nullable(),
+  description: z.string().nullable(),
   brand: z.string().min(1),
   hero_image_url: z.string().url(),
   price_inr: z.number().int().positive(),
