@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
 import { addToCart } from "@/app/cart-helper";
@@ -76,6 +76,8 @@ export default function DynamicProductClient({
   const [faq, setFaq] = useState("");
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewPhoto, setReviewPhoto] = useState<{ url: string; name: string } | null>(null);
+  const [reviewImageBusy, setReviewImageBusy] = useState(false);
   const mainBuyButtonRef = useRef<HTMLButtonElement>(null);
   const [stickyVisible, setStickyVisible] = useState(false);
 
@@ -179,6 +181,60 @@ export default function DynamicProductClient({
     ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) /
       reviews.length
     : 0;
+
+  const uploadReviewPhoto = async (file: File) => {
+    setReviewPhoto(null);
+    if (!file.size || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      return showGlobalStatus("Choose a JPG, PNG or WebP image.", "error");
+    }
+    if (file.size > 8_000_000) return showGlobalStatus("Choose an image smaller than 8MB.", "error");
+    setReviewImageBusy(true);
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const response = await fetch("/api/reviews/upload", { method: "POST", body: form });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Photo upload failed.");
+      setReviewPhoto({ url: payload.url, name: file.name });
+      showGlobalStatus("Photo uploaded", "success");
+    } catch (error) {
+      showGlobalStatus(error instanceof Error ? error.message : "Photo upload failed.", "error");
+    } finally {
+      setReviewImageBusy(false);
+    }
+  };
+
+  const submitReview = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (reviewBusy || reviewImageBusy) return;
+    const data = new FormData(event.currentTarget);
+    const body = String(data.get("body") || "").trim();
+    if (body.split(/\s+/).length > 50) return showGlobalStatus("Review must be 50 words or fewer.", "error");
+    setReviewBusy(true);
+    try {
+      const response = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          customerName: data.get("customerName"),
+          rating: data.get("rating"),
+          body,
+          imageUrl: reviewPhoto?.url,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to submit review.");
+      setReviewPhoto(null);
+      setReviewOpen(false);
+      showGlobalStatus("Review published", "success");
+      router.refresh();
+    } catch (error) {
+      showGlobalStatus(error instanceof Error ? error.message : "Unable to submit review.", "error");
+    } finally {
+      setReviewBusy(false);
+    }
+  };
 
   const add = () => {
     if (!available.length) {
@@ -462,7 +518,7 @@ export default function DynamicProductClient({
           </div>
         </div>
       </section>
-      <section className="reviews">
+      <section className="reviews" id="reviews">
         <div className="reviews-head">
           <div>
             <span className="eyebrow">CUSTOMER LOVE</span>
@@ -470,9 +526,76 @@ export default function DynamicProductClient({
               Reviews <i>({reviews.length})</i>
             </h2>
           </div>
-          <button className="rounded-full border border-[#bb7068] px-4 py-2 text-[10px] font-semibold uppercase tracking-[.1em] text-[#bb7068]" type="button" onClick={()=>setReviewOpen(current=>!current)}>Write a review</button>
+          <button
+            className="review-toggle"
+            type="button"
+            aria-expanded={reviewOpen}
+            disabled={reviewBusy || reviewImageBusy}
+            onClick={() => {
+              setReviewPhoto(null);
+              setReviewOpen(!reviewOpen);
+            }}
+          >{reviewOpen ? "Close review form" : "Write a review"}</button>
         </div>
-        {reviewOpen && <form className="mx-auto mb-8 grid max-w-2xl gap-3 rounded-xl border border-[#e8cdbc] bg-[#fffaf7] p-5 sm:grid-cols-2" onSubmit={async event=>{event.preventDefault();setReviewBusy(true);const form=event.currentTarget;const data=Object.fromEntries(new FormData(form));const response=await fetch("/api/reviews",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...data,productId:product.id})});const payload=await response.json();setReviewBusy(false);if(!response.ok)return showGlobalStatus(payload.error||"Unable to submit review","error");form.reset();setReviewOpen(false);showGlobalStatus("Review submitted for approval","success")}}><input className="rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm" name="customerName" placeholder="Your name" required/><input className="rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm" name="email" type="email" placeholder="Order email" required/><UniversalSelect name="rating" aria-label="Review rating" required>{[5,4,3,2,1].map(value=><option value={value} key={value}>{value} stars</option>)}</UniversalSelect><input className="rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm" name="title" placeholder="Review title"/><textarea className="min-h-28 rounded-lg border border-[#e8cdbc] px-4 py-3 text-sm sm:col-span-2" name="body" placeholder="Your review" minLength={10} required/><button className="rounded-full bg-[#bb7068] px-5 py-3 text-xs font-semibold uppercase tracking-[.1em] text-white sm:col-span-2" disabled={reviewBusy}>{reviewBusy?"Submitting…":"Submit review"}</button></form>}
+        {reviewOpen && (
+          <form className="review-form" onSubmit={submitReview}>
+            <div className="review-form-intro">
+              <span className="eyebrow">YOUR EXPERIENCE MATTERS</span>
+              <h3>Share your style story</h3>
+              <p>Tell us how it fits, feels, or made your day. Your review helps other shoppers choose with confidence.</p>
+            </div>
+            <div className="review-form-grid">
+              <label className="review-field">
+                <span>Your name</span>
+                <input name="customerName" placeholder="Enter your name" autoComplete="name" minLength={2} maxLength={100} required />
+              </label>
+              <fieldset className="review-field review-rating-field">
+                <legend>Rating</legend>
+                <div className="review-rating-picker">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <label className="review-star-option" key={value}>
+                      <input type="radio" name="rating" value={value} defaultChecked={value === 5} required />
+                      <span aria-hidden="true">★</span><em>{value} {value === 1 ? "star" : "stars"}</em>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <div className="review-field review-field-wide">
+                <span>Photo <em>optional · JPG, PNG or WebP up to 8MB</em></span>
+                <div className={`review-photo-picker ${reviewPhoto ? "has-photo" : ""}`}>
+                  <input
+                    id="review-photo-upload"
+                    className="review-photo-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void uploadReviewPhoto(file);
+                    }}
+                    disabled={reviewBusy || reviewImageBusy}
+                  />
+                  <label className="review-photo-dropzone" htmlFor="review-photo-upload">
+                    {reviewPhoto ? <img className="review-photo-preview" src={reviewPhoto.url} alt="Selected review photo" /> : <span className="review-photo-icon" aria-hidden="true">＋</span>}
+                    <span className="review-photo-copy">
+                      <strong>{reviewImageBusy ? "Uploading photo…" : reviewPhoto ? "Replace photo" : "Choose a photo"}</strong>
+                      <small>{reviewPhoto?.name || "Tap to browse from your device"}</small>
+                    </span>
+                  </label>
+                  {reviewPhoto && <small className="review-upload-status is-ready">Photo uploaded and ready to submit.</small>}
+                </div>
+              </div>
+              <label className="review-field review-field-wide">
+                <span>Your review <em>50 words max</em></span>
+                <textarea name="body" placeholder="What did you love about it?" minLength={3} maxLength={2000} required />
+              </label>
+            </div>
+            <div className="review-form-foot">
+              <small>Your review will appear after submission.</small>
+              <button className="review-submit" disabled={reviewBusy || reviewImageBusy}>{reviewBusy ? "Submitting…" : reviewImageBusy ? "Uploading…" : "Submit review"}</button>
+            </div>
+          </form>
+        )}
         {reviews.length ? (
           <>
             <div className="review-summary">

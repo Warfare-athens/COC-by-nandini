@@ -1,35 +1,28 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { once } from "node:events";
+import { readFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import next from "next";
 
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
+test("server-renders the homepage correctly", async (t) => {
+  const hostname = "127.0.0.1";
+  const server = createServer();
+  const listening = once(server, "listening");
+  server.listen(0, hostname);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  await listening;
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
-}
-
-test("server-renders the homepage correctly", async () => {
-  const response = await render();
+  const { port } = server.address();
+  const app = next({ dev: false, dir: fileURLToPath(new URL("../", import.meta.url)), hostname, port, quiet: true });
+  t.after(() => app.close());
+  await app.prepare();
+  server.on("request", app.getRequestHandler());
+  const response = await fetch(`http://${hostname}:${port}/`, {
+    headers: { accept: "text/html" },
+    signal: AbortSignal.timeout(30_000),
+  });
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
@@ -37,6 +30,7 @@ test("server-renders the homepage correctly", async () => {
   assert.match(html, /Carnival of Clothes/i);
   assert.match(html, /by nandini/i);
   assert.match(html, /Shop by Category/i);
+  assert.match(html, /home-reviews-title/);
 });
 
 test("keeps pages structured and correct", async () => {
@@ -46,7 +40,7 @@ test("keeps pages structured and correct", async () => {
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /export default function Home/);
+  assert.match(page, /export default (?:async )?function Home/);
   assert.match(layout, /html lang="en"/);
   assert.match(packageJson, /"next":/);
 });

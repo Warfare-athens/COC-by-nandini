@@ -2,6 +2,7 @@ import { AdminCreateForm, AdminRecordAction } from "@/app/components/AdminModule
 import AdminLiveRefresh from "@/app/components/AdminLiveRefresh";
 import WhatsAppRecoveryAction from "@/app/components/WhatsAppRecoveryAction";
 import { AdminEmptyState, AdminPageHeader, AdminPanel, AdminStatCard } from "@/app/components/AdminUI";
+import AdminReviewsManager from "@/app/components/AdminReviewsManager";
 import { commerceConfigured, getSupabaseAdmin } from "@/db";
 import { BLOG_POSTS } from "@/lib/blogs";
 import { COLLECTIONS } from "@/lib/collections";
@@ -50,8 +51,9 @@ export default async function AdminModulePage({ module }: { module: AdminModule 
   }
 
   if (module === "reviews") {
-    const reviews = await rows("product_reviews", "id,customer_name,email,rating,title,body,status,is_verified,created_at,products(name)");
-    return <><Head title="Reviews"/><Kpis items={[["All reviews",reviews.length],["Pending",reviews.filter(r=>r.status==="pending").length],["Approved",reviews.filter(r=>r.status==="approved").length],["Average rating",reviews.length?(reviews.reduce((sum,r)=>sum+Number(r.rating||0),0)/reviews.length).toFixed(1):"—"]]}/><Panel title="Review moderation">{reviews.length?<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Customer</th><th>Review</th><th>Rating</th><th>Status</th><th>Moderate</th></tr></thead><tbody>{reviews.map(row=><tr key={text(row.id)}><td><b>{text(row.customer_name)}</b><small className="admin-row-sub">{text(row.email)}</small></td><td><b>{text(row.title)}</b><small className="admin-row-sub">{text(row.body)}</small></td><td>{"★".repeat(Number(row.rating||0))}</td><td><span className={`admin-status ${statusClass(row.status)}`}>{text(row.status)}</span></td><td><AdminRecordAction module="reviews" id={text(row.id)} current={text(row.status)} options={["pending","approved","rejected"]}/></td></tr>)}</tbody></table></div>:<Empty/>}</Panel></>;
+    const reviews = await rows("product_reviews", "id,product_id,customer_name,email,rating,title,body,image_url,status,is_verified,created_at,products(name)");
+    const products = await rows("products", "id,name", "name", 500);
+    return <><Head title="Reviews"/><Kpis items={[["All reviews",reviews.length],["Pending",reviews.filter(r=>r.status==="pending").length],["Approved",reviews.filter(r=>r.status==="approved").length],["Average rating",reviews.length?(reviews.reduce((sum,r)=>sum+Number(r.rating||0),0)/reviews.length).toFixed(1):"—"]]}/><Panel title="Review management"><AdminReviewsManager initialReviews={reviews as never} products={products as never}/></Panel></>;
   }
 
   if (module === "templates") {

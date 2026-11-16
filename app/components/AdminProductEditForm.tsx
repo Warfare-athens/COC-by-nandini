@@ -30,6 +30,17 @@ type ProductImage = {
   is_hero: boolean;
   sort_order: number;
 };
+type ProductReview = {
+  id: string;
+  customer_name: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  image_url: string | null;
+  is_verified: boolean;
+  status: string;
+  created_at: string;
+};
 type ProductEdit = {
   id: string;
   name: string;
@@ -58,6 +69,7 @@ type ProductEdit = {
   is_featured: boolean;
   product_variants: Variant[];
   product_images: ProductImage[];
+  product_reviews?: ProductReview[];
 };
 
 const text = (form: FormData, key: string) =>
@@ -895,6 +907,22 @@ export default function AdminProductEditForm({
             Featured
           </label>
         </div>
+      </section>
+      <section className="admin-editor-section admin-product-reviews-panel">
+        <div className="admin-editor-title">
+          <div>
+            <h2>Product reviews</h2>
+            <p>Approved reviews appear on the product page. Moderate all submissions from the Reviews panel.</p>
+          </div>
+          <a className="admin-link" href="/admin/reviews">Open Reviews</a>
+        </div>
+        {product.product_reviews?.length ? <div className="admin-product-review-list">{product.product_reviews.map((review) => <article className="admin-product-review" key={review.id}>
+          <div className="admin-product-review-head"><strong>{review.customer_name}</strong><span>{"★".repeat(Math.max(0, Math.min(5, Number(review.rating || 0))))}{"☆".repeat(5 - Math.max(0, Math.min(5, Number(review.rating || 0))))}</span><small>{review.status}</small></div>
+          {review.is_verified && <em>Verified buyer</em>}
+          {review.title && <b>{review.title}</b>}
+          <p>{review.body}</p>
+          {review.image_url && <img src={review.image_url} alt={`Review from ${review.customer_name}`} />}
+        </article>)}</div> : <div className="admin-empty-state"><h3>No reviews yet</h3><p>Customer reviews for this product will appear here after submission.</p></div>}
       </section>
       {notice && <div className="admin-notice">{notice}</div>}
       {error && <div className="admin-error">{error}</div>}

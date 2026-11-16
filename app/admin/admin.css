@@ -1348,6 +1348,25 @@
 .admin-link { color: var(--admin-accent-dark); font-size: 12px; font-weight: 650; }
 .admin-panel, .admin-card, .admin-kpi { overflow: hidden; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: var(--admin-surface); box-shadow: var(--admin-shadow); }
 .admin-panel { margin-top: 18px; }
+.admin-product-review-list { display: grid; gap: 10px; }
+.admin-product-review { position: relative; display: grid; gap: 7px; padding: 14px; border: 1px solid var(--admin-border); border-radius: 12px; background: var(--admin-surface-muted, #fcfcfc); }
+.admin-product-review-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.admin-product-review-head strong { color: var(--admin-text); }
+.admin-product-review-head span { color: #c89452; letter-spacing: 1px; }
+.admin-product-review-head small { margin-left: auto; color: var(--admin-text-muted); text-transform: capitalize; }
+.admin-product-review em { width: max-content; color: var(--admin-accent); font-size: 10px; font-style: normal; }
+.admin-product-review p { margin: 0; color: var(--admin-text-muted); line-height: 1.55; }
+.admin-product-review > img { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; }
+.admin-review-actions { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.admin-review-editor { display: grid; gap: 16px; margin-bottom: 18px; padding: 18px; border: 1px solid var(--admin-border); border-radius: 12px; background: var(--admin-surface-muted, #fcfcfc); }
+.admin-review-editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.admin-review-editor-head h3 { margin: 0; font-size: 16px; }
+.admin-review-editor-head p { margin: 5px 0 0; color: var(--admin-text-muted); font-size: 11px; }
+.admin-review-editor small { color: var(--admin-text-muted); }
+.admin-review-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-review-row-actions .danger { color: #a44840; border-color: #e1b4ae; }
+.admin-review-thumb { display: block; width: 48px; height: 48px; margin-top: 8px; border-radius: 6px; object-fit: cover; }
+.admin-review-stars { color: #c89452; letter-spacing: 1px; white-space: nowrap; }
 .admin-panel-head { display: flex; min-height: 68px; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--admin-border); padding: 16px 20px; }
 .admin-panel-head h2, .admin-panel h2 { margin: 0; color: var(--admin-text); font-size: 17px; font-weight: 650; letter-spacing: -.015em; }
 .admin-panel-head p { margin: 4px 0 0; color: var(--admin-text-muted); font-size: 11px; }

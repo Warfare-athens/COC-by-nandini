@@ -1,0 +1,22 @@
+.home-reviews .home-reviews-viewport { overflow: hidden; max-width: 100%; padding: 8px 0 16px; }
+.home-reviews .home-reviews-track, .home-reviews .home-reviews-group { display: flex; width: max-content; }
+.home-reviews .home-reviews-group { gap: 16px; padding-right: 16px; }
+.home-reviews .home-review-card { display: flex; flex: 0 0 350px; flex-direction: column; box-sizing: border-box; width: 350px; height: 250px; min-height: 0; overflow: hidden; padding: 24px; border: 1px solid #ead5c9; border-radius: 8px; background: #fffaf7; box-shadow: none; animation: none; }
+.home-reviews .home-review-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.home-reviews .home-review-stars { color: #bd7c6a; font-size: 15px; letter-spacing: 3px; }
+.home-reviews .home-review-quote { font: 42px/0.8 'Instrument Serif', serif; color: #e5bcb0; }
+.home-reviews .home-review-card h3 { margin: 10px 0 0; font: 21px/1.2 'Instrument Serif', serif; }
+.home-reviews .home-review-body { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; margin: 12px 0; font: 19px/1.35 'Instrument Serif', serif; color: #533c36; }
+.home-reviews .home-review-footer { display: flex; align-items: center; gap: 10px; min-width: 0; margin-top: auto; padding-top: 12px; border-top: 1px solid #efdfd6; }
+.home-reviews .home-review-avatar { display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%; background: #f5e4db; color: #a95f58; font: 19px 'Instrument Serif', serif; }
+.home-reviews .home-review-footer > div { min-width: 0; flex: 1; }
+.home-reviews .home-review-footer strong, .home-reviews .home-review-footer a, .home-reviews .home-review-footer .home-review-verified { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-reviews .home-review-footer strong { color: #3a2926; font: 600 12px 'Work Sans', sans-serif; }
+.home-reviews .home-review-footer a, .home-reviews .home-review-verified { margin-top: 4px; color: #a56b61; font-size: 10px; }
+.home-reviews .home-review-footer img.home-review-photo { display: block; flex: 0 0 44px; width: 44px; height: 44px; min-width: 44px; max-width: 44px; max-height: 44px; margin: 0; object-fit: cover; border-radius: 4px; }
+.home-reviews .home-review-card { position: relative; }
+.home-reviews .home-review-link::after { content: ""; position: absolute; inset: 0; }
+.home-reviews .home-review-card:focus-within { outline: 2px solid #bb7068; outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) { .home-reviews .home-reviews-track { animation: home-review-scroll 45s linear infinite; } .home-reviews .home-reviews-viewport:hover .home-reviews-track, .home-reviews .home-reviews-viewport:focus-within .home-reviews-track { animation-play-state: paused; } }
+@media (prefers-reduced-motion: reduce) { .home-reviews .home-reviews-viewport { overflow-x: auto; } .home-reviews .home-reviews-group[aria-hidden=true] { display: none; } }
+@media (max-width: 800px) { .home-reviews .home-review-card { flex-basis: min(310px, 80vw); width: min(310px, 80vw); height: 240px; padding: 20px; } .home-reviews .home-reviews-group { gap: 12px; padding-right: 12px; } }

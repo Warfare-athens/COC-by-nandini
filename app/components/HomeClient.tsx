@@ -10,6 +10,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { showGlobalStatus } from "@/app/global-status";
 import { BLOG_POSTS } from "@/lib/blogs";
 import journalStyles from "./HomeJournal.module.css";
+import "./HomeReviews.css";
 import { NewsletterForm } from "./EngagementForms";
 import { HomeProduct, mapDbProductToHomeProduct } from "@/lib/product-mapper";
 import SizePickerPopover from "./SizePickerPopover";
@@ -22,6 +23,17 @@ type ProductImageSource = {
   heroImage?: string | null;
   primaryImage?: string | null;
   images?: Array<string | { url: string; isPrimary?: boolean }>;
+};
+type HomeReview = {
+  id: string;
+  customer_name: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  image_url: string | null;
+  is_verified: boolean;
+  created_at: string;
+  products?: { name?: string; slug?: string } | null;
 };
 
 const homeCategoryOptions = [
@@ -58,8 +70,9 @@ const getProductHeroImage = (product: ProductImageSource) => {
   );
 };
 
-export default function HomeClient({ initialProducts = [] }: { initialProducts?: HomeProduct[] }) {
+export default function HomeClient({ initialProducts = [], initialReviews = [] }: { initialProducts?: HomeProduct[]; initialReviews?: Array<Record<string, unknown>> }) {
   const [products, setProducts] = useState<HomeProduct[]>(initialProducts);
+  const reviews = initialReviews as unknown as HomeReview[];
   const [activeCategory, setActiveCategory] = useState("All");
   const pageRef = useRef<HTMLElement>(null);
   const showcaseRef = useRef<HTMLElement>(null);
@@ -1029,6 +1042,49 @@ export default function HomeClient({ initialProducts = [] }: { initialProducts?:
           </a>
         </div>
         <div className="section-index">02</div>
+      </section>
+
+      <section className="home-reviews" aria-labelledby="home-reviews-title">
+        <div className="home-reviews-head">
+          <div>
+            <span className="eyebrow">CUSTOMER LOVE</span>
+            <h2 id="home-reviews-title">Loved by <i>every you</i></h2>
+            <p>Real notes from the women who make Carnival of Clothes part of their everyday.</p>
+          </div>
+          <a className="text-link" href="/shop">Shop the collection&nbsp; →</a>
+        </div>
+        {reviews.length > 0 ? (
+          <div className="home-reviews-viewport" tabIndex={0} aria-label="Customer reviews. Scroll to see more.">
+            <div className="home-reviews-track">
+            {[0, 1].map((copy) => <div className="home-reviews-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>
+            {(reviews.length < 3 ? Array.from({ length: Math.ceil(3 / reviews.length) }, () => reviews).flat() : reviews).map((review, index) => {
+              const product = review.products;
+              const filledStars = Math.max(0, Math.min(5, Number(review.rating) || 0));
+              return (
+                <article className="home-review-card" key={`${review.id}-${index}`} aria-hidden={index >= reviews.length ? true : undefined}>
+                  <div className="home-review-card-top"><div className="home-review-stars" aria-label={`${filledStars} out of 5 stars`}>
+                    {"★".repeat(filledStars)}{"☆".repeat(5 - filledStars)}
+                  </div><span className="home-review-quote" aria-hidden="true">“</span></div>
+                  {review.title ? <h3>{review.title}</h3> : null}
+                  <p className="home-review-body">“{review.body}”</p>
+                  <div className="home-review-footer">
+                    <span className="home-review-avatar home-review-avatar-fallback" aria-hidden="true">{review.customer_name?.charAt(0)?.toUpperCase() || "C"}</span>
+                    <div>
+                      <strong>{review.customer_name || "Carnival customer"}</strong>
+                      {review.is_verified ? <span className="home-review-verified">Verified buyer</span> : null}
+                      {product?.slug ? <a className="home-review-link" tabIndex={copy === 1 || index >= reviews.length ? -1 : undefined} href={`/product/${product.slug}#reviews`} aria-label={`Read reviews for ${product.name || "this product"}`}><span>{product.name || "View product"} · Read reviews →</span></a> : null}
+                    </div>
+                    {review.image_url ? <img className="home-review-photo" src={review.image_url} alt="Customer review photo" loading="lazy" /> : null}
+                  </div>
+                </article>
+              );
+            })}
+            </div>)}
+            </div>
+          </div>
+        ) : (
+          <div className="home-reviews-empty">Reviews from our Carnival community will appear here soon.</div>
+        )}
       </section>
 
       <section className={journalStyles.section} aria-labelledby="home-journal-title">
