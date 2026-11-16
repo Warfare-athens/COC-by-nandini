@@ -36,7 +36,7 @@ export default async function AdminProductsPage() {
     };
   });
   return <>
-      <AdminPageHeader title="Products" actions={<a className="admin-button" href="/admin/products/new">Add product</a>}>Manage your catalog, availability, pricing, and merchandising.</AdminPageHeader>
+      <AdminPageHeader title="Products" actions={<a className="admin-button" href="/admin/products/new">Add product</a>} />
       <AdminProductCatalog products={products} />
     </>;
 }

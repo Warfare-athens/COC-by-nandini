@@ -5,10 +5,54 @@ import { useRouter } from "next/navigation";
 import { showGlobalStatus } from "@/app/global-status";
 import UniversalSelect from "./UniversalSelect";
 
-export default function AdminOrderDetailForm({ order }: { order: { id: string; status: string; fulfillment_status: string; carrier?: string | null; tracking_number?: string | null; tracking_url?: string | null } }) {
-  const [busy,setBusy]=useState(false); const router=useRouter();
-  const submit=async(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();setBusy(true);const form=new FormData(event.currentTarget);const response=await fetch(`/api/admin/orders/${order.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:form.get("status"),fulfillmentStatus:form.get("fulfillmentStatus"),carrier:form.get("carrier"),trackingNumber:form.get("trackingNumber"),trackingUrl:form.get("trackingUrl")})});const payload=await response.json();setBusy(false);if(!response.ok)return showGlobalStatus(payload.error||"Unable to update order","error");showGlobalStatus("Order updated","success");router.refresh()};
-  return <form className="admin-inline-form" onSubmit={submit}><UniversalSelect controlSize="compact" name="status" defaultValue={order.status} aria-label="Order status">{["pending","confirmed","cancelled","completed","returned"].map(v=><option key={v}>{v}</option>)}</UniversalSelect><UniversalSelect controlSize="compact" name="fulfillmentStatus" defaultValue={order.fulfillment_status} aria-label="Fulfilment status">{["unfulfilled","processing","packed","shipped","out_for_delivery","delivered","cancelled","returned"].map(v=><option key={v}>{v}</option>)}</UniversalSelect><input className="admin-input" name="carrier" defaultValue={order.carrier||""} placeholder="Carrier"/><input className="admin-input" name="trackingNumber" defaultValue={order.tracking_number||""} placeholder="Tracking number"/><input className="admin-input wide" name="trackingUrl" type="url" defaultValue={order.tracking_url||""} placeholder="Tracking URL"/><button className="admin-small-button primary" disabled={busy}>{busy?"Saving…":"Save order"}</button></form>;
+export default function AdminOrderDetailForm({ order }: { order: {
+  id: string; status: string; fulfillment_status: string; payment_method: string; paid: boolean;
+  carrier?: string | null; tracking_number?: string | null; tracking_url?: string | null;
+} }) {
+  const [busy, setBusy] = useState(false);
+  const router = useRouter();
+  const awaitingPayment = order.payment_method === "razorpay" && !order.paid;
+  const update = async (data: Record<string, unknown>) => {
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to update order");
+      showGlobalStatus("Order updated", "success");
+      router.refresh();
+    } catch (error) {
+      showGlobalStatus(error instanceof Error ? error.message : "Unable to update order", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void update(Object.fromEntries(new FormData(event.currentTarget)));
+  };
+  if (order.status === "cancelled") return <div className="admin-empty">Order cancelled.</div>;
+  if (awaitingPayment) return <div className="admin-empty">
+    <p>Shipping controls become available after payment is captured.</p>
+    <button className="admin-small-button" type="button" disabled={busy} onClick={() => {
+      if (window.confirm("Cancel this payment draft?")) void update({ status: "cancelled", fulfillmentStatus: "cancelled" });
+    }}>{busy ? "Updating…" : "Cancel payment draft"}</button>
+  </div>;
+
+  return <form className="admin-inline-form" onSubmit={submit}>
+    <UniversalSelect controlSize="compact" name="status" defaultValue={order.status} aria-label="Order status">
+      {Array.from(new Set([order.status,"pending","confirmed","cancelled","completed","returned"])).map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}
+    </UniversalSelect>
+    <UniversalSelect controlSize="compact" name="fulfillmentStatus" defaultValue={order.fulfillment_status} aria-label="Fulfillment status">
+      {["unfulfilled","processing","packed","shipped","out_for_delivery","delivered","cancelled","returned"].map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}
+    </UniversalSelect>
+    <input className="admin-input" name="carrier" defaultValue={order.carrier || ""} placeholder="Carrier" aria-label="Carrier" />
+    <input className="admin-input" name="trackingNumber" defaultValue={order.tracking_number || ""} placeholder="Tracking number" aria-label="Tracking number" />
+    <input className="admin-input wide" name="trackingUrl" type="url" defaultValue={order.tracking_url || ""} placeholder="Tracking URL" aria-label="Tracking URL" />
+    <button className="admin-small-button primary" disabled={busy}>{busy ? "Saving…" : "Save order"}</button>
+  </form>;
 }
 
 export function PrintInvoiceButton(){return <button className="admin-button print-hide" type="button" onClick={()=>window.print()}>Print invoice</button>}
@@ -31,7 +75,7 @@ export function WhatsAppOrderButton({
   const firstName = customerName && customerName !== "—" ? customerName.trim().split(/\s+/)[0] : "there";
   const formattedTotal = totalInr && totalInr !== "—" ? `₹${Number(totalInr).toLocaleString("en-IN")}` : "";
   const siteUrl = "https://www.carnivalofclothes.com";
-  const trackingUrl = `${siteUrl}/track-order?orderNumber=${encodeURIComponent(orderNumber)}`;
+  const trackingUrl = `${siteUrl}/track-order?order=${encodeURIComponent(orderNumber)}`;
   const message = `Hi ${firstName}! ✨ This is Nandini from Carnival of Clothes, Ahmedabad.\n\nYour order *#${orderNumber}*${formattedTotal ? ` (${formattedTotal})` : ""} is confirmed and being prepared with care in our boutique studio! 🛍️\n\n🚚 Live tracking:\n${trackingUrl}\n\nFeel free to reply if you need any styling help or delivery updates! 💕\n\n— Carnival of Clothes, Ahmedabad`;
   const url = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
 

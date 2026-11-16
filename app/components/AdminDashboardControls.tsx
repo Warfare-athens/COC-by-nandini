@@ -1,18 +1,24 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { showGlobalStatus } from "../global-status";
 import UniversalSelect from "./UniversalSelect";
+import { adminTimeCookie, parseAdminDays } from "@/lib/admin-time";
 
 export default function AdminDashboardControls({ days }: { days: number }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const query = useSearchParams();
+  const [selectedDays, setSelectedDays] = useState(days);
   const [refreshing, setRefreshing] = useState(false);
 
   const changeWindow = (value: string) => {
-    showGlobalStatus("Updating dashboard", "loading");
-    router.push(`/admin?days=${value}`);
-    window.setTimeout(() => showGlobalStatus("Dashboard updated", "success", 1400), 650);
+    setSelectedDays(parseAdminDays(value) ?? days);
+    document.cookie = `${adminTimeCookie}=${value}; path=/admin; max-age=31536000; SameSite=Lax`;
+    const params = new URLSearchParams(query.toString());
+    params.set("days", value);
+    router.replace(`${pathname}?${params}`);
   };
 
   const refresh = () => {
@@ -28,8 +34,7 @@ export default function AdminDashboardControls({ days }: { days: number }) {
   return (
     <div className="command-controls">
       <label>
-        <span>Window</span>
-        <UniversalSelect controlSize="compact" fluid={false} value={days} onChange={(event) => changeWindow(event.target.value)} aria-label="Dashboard time window">
+        <UniversalSelect controlSize="compact" fluid={false} value={parseAdminDays(query.get("days") || undefined) ?? selectedDays} onChange={(event) => changeWindow(event.target.value)} aria-label="Admin date range">
           <option value="1">Today</option>
           <option value="7">Last 7 days</option>
           <option value="30">Last 30 days</option>

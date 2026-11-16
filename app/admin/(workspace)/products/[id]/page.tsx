@@ -25,7 +25,7 @@ export default async function AdminProductEditPage({
   return (
     <>
       <div className="admin-head">
-        <div><h1>Edit product</h1><p>Update storefront content, pricing, images, categories, and inventory.</p></div>
+        <h1>{product.name}</h1>
         <a className="admin-link" href="/admin/products">
           Back to products
         </a>

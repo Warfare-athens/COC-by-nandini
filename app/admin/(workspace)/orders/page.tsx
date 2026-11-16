@@ -1,88 +1,46 @@
 import AdminOrderControl from "@/app/components/AdminOrderControl";
+import AdminLiveRefresh from "@/app/components/AdminLiveRefresh";
 import { WhatsAppOrderButton } from "@/app/components/AdminOrderDetailForm";
 import { AdminDataTable, AdminPageHeader } from "@/app/components/AdminUI";
 import { commerceConfigured, getSupabaseAdmin } from "@/db";
+import { adminRangeStart } from "@/lib/admin-time";
+import { getAdminDays } from "@/lib/admin-time-server";
+import { isPlacedOrder, orderPaymentLabel, orderPaymentTone } from "@/lib/admin-commerce";
 
-type OrderRow = {
-  id: string;
-  order_number: string;
-  email: string;
-  phone: string;
-  status: string;
-  payment_status: string;
-  fulfillment_status: string;
-  total_inr: number;
-  placed_at: string;
-};
+export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+  const days = await getAdminDays((await searchParams).days);
+  const since = adminRangeStart(days);
+  const { data, error } = commerceConfigured()
+    ? await getSupabaseAdmin().from("orders")
+      .select("id,cart_id,order_number,email,phone,status,payment_status,payment_method,fulfillment_status,total_inr,placed_at,confirmed_at")
+      .or(`placed_at.gte.${since},confirmed_at.gte.${since}`).order("placed_at", { ascending: false }).limit(200)
+    : { data: [], error: null };
+  if (error) throw new Error(`Unable to load orders: ${error.message}`);
+  const orders = data || [];
 
-export default async function AdminOrdersPage() {
-  let orders: OrderRow[] = [];
-  if (commerceConfigured()) {
-    const { data, error } = await getSupabaseAdmin()
-      .from("orders")
-      .select(
-        "id,order_number,email,phone,status,payment_status,fulfillment_status,total_inr,placed_at",
-      )
-      .order("placed_at", { ascending: false })
-      .limit(100);
-    if (error) throw new Error(`Unable to load orders: ${error.message}`);
-    orders = (data || []) as OrderRow[];
-  }
-  const paymentLabel = (status: string) => ({ paid: "Paid", failed: "Failed", payment_pending: "Awaiting payment", pending: "Awaiting payment" }[status] || status.replaceAll("_", " "));
-  const isTestEmail = (email: string) => /(^|[_-])(test|cod)[_-]|@example\.com$/i.test(email);
-  return (
-    <>
-      <AdminPageHeader title="Orders">Review payments, fulfillment, customer details, and delivery progress.</AdminPageHeader>
-      <section className="admin-panel">
-        <AdminDataTable columns={["Order", "Placed", "Customer", "Payment", "Total", "Fulfillment", "Open"]}>
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td data-label="Order">
-                  <strong>{order.order_number}</strong>
-                </td>
-                <td data-label="Placed" data-date={order.placed_at}><small>{new Date(order.placed_at).toLocaleString("en-IN")}</small></td>
-                <td data-label="Customer">
-                  {order.email}
-                  {isTestEmail(order.email) && <span className="admin-status warn" style={{ display: "inline-flex", marginLeft: 6 }}>Test data</span>}
-                  <br />
-                  <small>{order.phone}</small>
-                </td>
-                <td data-label="Payment">
-                  <span className={`admin-status ${order.payment_status === "paid" ? "good" : order.payment_status === "failed" ? "bad" : "warn"}`}>
-                    {paymentLabel(order.payment_status)}
-                  </span>
-                  {order.status === "pending_payment" && (
-                    <small className="admin-row-sub" style={{ display: "block", color: "#b76e00", fontWeight: 600 }}>
-                      Unpaid Draft
-                    </small>
-                  )}
-                </td>
-                <td data-label="Total">₹{Number(order.total_inr).toLocaleString("en-IN")}</td>
-                <td data-label="Fulfillment">
-                  <AdminOrderControl
-                    id={order.id}
-                    current={order.fulfillment_status}
-                  />
-                </td>
-                <td data-label="Open">
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <a className="admin-small-button" href={`/admin/orders/${order.id}`}>Details</a>
-                    <WhatsAppOrderButton
-                      phone={order.phone}
-                      orderNumber={order.order_number}
-                      totalInr={order.total_inr}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!orders.length && (
-              <tr>
-                <td colSpan={7}>No orders yet.</td>
-              </tr>
-            )}
-        </AdminDataTable>
-      </section>
-    </>
-  );
+  return <>
+    <AdminPageHeader title="Orders" actions={<AdminLiveRefresh />} />
+    <section className="admin-panel">
+      <AdminDataTable dateFiltered columns={["Order", "Placed", "Customer", "Status", "Payment", "Total", "Fulfillment", "Open"]}>
+        {orders.map((order) => {
+          const placed = isPlacedOrder(order);
+          return <tr key={order.id}>
+            <td><a className="admin-table-link" href={`/admin/orders/${order.id}`}>{order.order_number}</a></td>
+            <td data-date={order.placed_at}>{new Date(order.placed_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</td>
+            <td>{order.email}{/(^|[_-])(test|cod)[_-]|@example\.com$/i.test(order.email) && <small className="admin-status warn">Test data</small>}<small className="admin-row-sub">{order.phone}</small></td>
+            <td>{order.status === "pending_payment" ? "Payment draft" : order.status.replaceAll("_", " ")}</td>
+            <td><span className={`admin-status ${orderPaymentTone(order.payment_status)}`}>{orderPaymentLabel(order.payment_status, order.payment_method)}</span></td>
+            <td>₹{Number(order.total_inr).toLocaleString("en-IN")}</td>
+            <td>{placed ? <AdminOrderControl id={order.id} current={order.fulfillment_status} /> : order.fulfillment_status.replaceAll("_", " ")}</td>
+            <td><div className="admin-commerce-actions">
+              <a className="admin-small-button" href={`/admin/orders/${order.id}`}>Details</a>
+              {order.cart_id && <a className="admin-small-button" href={`/admin/checkouts/${order.cart_id}`}>Journey</a>}
+              {placed && <WhatsAppOrderButton phone={order.phone} orderNumber={order.order_number} totalInr={order.total_inr} />}
+            </div></td>
+          </tr>;
+        })}
+        {!orders.length && <tr><td colSpan={8}>No orders in this date range.</td></tr>}
+      </AdminDataTable>
+    </section>
+  </>;
 }

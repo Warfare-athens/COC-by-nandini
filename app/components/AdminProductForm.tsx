@@ -569,9 +569,6 @@ export default function AdminProductForm() {
               </svg>
               <strong>Unfinished draft restored</strong>
             </div>
-            <p>
-              An unsaved product draft from your previous session was recovered. You can continue editing or discard it to start fresh with a blank form.
-            </p>
           </div>
           <div className="admin-draft-banner-actions">
             <button
@@ -599,9 +596,6 @@ export default function AdminProductForm() {
         <div className="admin-product-builder-head">
           <div>
             <h2>Product content & builder</h2>
-            <p style={{ margin: "2px 0 0", fontSize: "11px", color: "var(--admin-text-muted)" }}>
-              Generate with Gemini AI or enter details manually below.
-            </p>
           </div>
           <div className="admin-builder-actions">
             <button

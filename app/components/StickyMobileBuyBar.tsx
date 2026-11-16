@@ -153,6 +153,7 @@ export default function StickyMobileBuyBar({
                   }
                 }}
                 disabled={!canBuy}
+                data-commerce-action="add_to_cart"
                 className={`h-10 px-3 rounded-xl text-[11px] font-bold uppercase tracking-wider border border-[#d4b8aa] bg-white text-[#3a2926] shadow-xs transition active:scale-95 ${
                   added ? "text-[#28a745] border-[#28a745]" : ""
                 }`}
@@ -170,6 +171,7 @@ export default function StickyMobileBuyBar({
                   }
                 }}
                 disabled={!canBuy}
+                data-commerce-action="buy_now"
                 className={`h-10 px-3.5 rounded-xl text-[11px] font-bold uppercase tracking-wider text-white shadow-xs transition active:scale-95 ${
                   !canBuy
                     ? "bg-[#cdb9ae] cursor-not-allowed"
@@ -190,6 +192,7 @@ export default function StickyMobileBuyBar({
                 }
               }}
               disabled={!canBuy}
+              data-commerce-action="add_to_cart"
               className={`h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-white shadow-xs transition active:scale-95 ${
                 added
                   ? "bg-[#28a745]"

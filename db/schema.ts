@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -171,6 +172,8 @@ export const carts = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     anonymousToken: text("anonymous_token").notNull(),
+    cartRevision: bigint("cart_revision", { mode: "number" }).default(0).notNull(),
+    leadRevision: bigint("lead_revision", { mode: "number" }).default(0).notNull(),
     fullName: text("full_name"),
     email: text("email"),
     phone: text("phone"),
@@ -235,6 +238,8 @@ export const orders = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     orderNumber: text("order_number").notNull(),
+    cartId: uuid("cart_id").references(() => carts.id, { onDelete: "set null" }),
+    checkoutKey: text("checkout_key"),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
     status: text("status").default("pending").notNull(),
@@ -259,10 +264,13 @@ export const orders = pgTable(
     placedAt: timestamp("placed_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [
     uniqueIndex("orders_number_idx").on(table.orderNumber),
+    uniqueIndex("orders_checkout_key_idx").on(table.checkoutKey),
+    index("orders_cart_idx").on(table.cartId),
     index("orders_email_idx").on(table.email),
     index("orders_status_idx").on(table.status),
   ],

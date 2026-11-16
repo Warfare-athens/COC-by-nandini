@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ChevronsLeft, ChevronsRight, Command, ExternalLink, LogOut, Menu, Search, UserRound, X } from "lucide-react";
 import { adminNavigation, currentAdminNavigation, isAdminNavigationActive } from "@/app/components/admin-navigation";
 import AdminResponsiveTables from "@/app/components/AdminResponsiveTables";
+import AdminDashboardControls from "@/app/components/AdminDashboardControls";
 
 const RAIL_KEY = "coc-admin-rail-expanded";
 
@@ -14,7 +15,7 @@ function focusableElements(container: HTMLElement | null) {
   return Array.from(container.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
 }
 
-export default function AdminShell({ children }: { children: ReactNode }) {
+export default function AdminShell({ children, days }: { children: ReactNode; days: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const [railExpanded, setRailExpanded] = useState(false);
@@ -103,8 +104,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     {mobileOpen && <button className="admin-drawer-overlay" type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
     <div className="admin-workspace">
       <header className="admin-topbar">
-        <div className="admin-topbar-leading"><button ref={menuButtonRef} className="admin-icon-button" type="button" onClick={toggleRail} aria-label="Toggle navigation" aria-controls="admin-navigation" aria-expanded={mobileOpen || railExpanded}><Menu size={21} /></button><div className="admin-current-page"><small>Store control</small><strong>{page.label}</strong></div></div>
+        <div className="admin-topbar-leading"><button ref={menuButtonRef} className="admin-icon-button" type="button" onClick={toggleRail} aria-label="Toggle navigation" aria-controls="admin-navigation" aria-expanded={mobileOpen || railExpanded}><Menu size={21} /></button><div className="admin-current-page"><strong>{page.label}</strong></div></div>
         <div className="admin-topbar-actions">
+          <AdminDashboardControls days={days} />
           <button ref={paletteButtonRef} className="admin-command-button" type="button" onClick={() => setPaletteOpen(true)} aria-haspopup="dialog" aria-expanded={paletteOpen} aria-label="Open quick navigation"><Search size={17} /><span>Quick navigation</span><kbd>⌘ K</kbd></button>
           <a className="admin-storefront-button" href="/" target="_blank" rel="noopener noreferrer" aria-label="Open storefront in a new tab"><ExternalLink size={17} /><span>Storefront</span></a>
           <div className="admin-account"><button className="admin-account-button" type="button" onClick={() => setAccountOpen((open) => !open)} aria-label="Open account menu" aria-expanded={accountOpen} aria-haspopup="menu"><UserRound size={18} /><span>Admin</span></button>{accountOpen && <div className="admin-account-menu" role="menu"><a href="/" target="_blank" rel="noopener noreferrer" role="menuitem"><ExternalLink size={17} />View storefront</a><button type="button" onClick={logout} disabled={loggingOut} role="menuitem"><LogOut size={17} />{loggingOut ? "Logging out…" : "Log out"}</button></div>}</div>

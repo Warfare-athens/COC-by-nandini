@@ -90,6 +90,10 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 - `npm run dev`: start local development
 - `npm run build`: verify the vinext build output
 - `npm test`: build the starter and verify its rendered loading skeleton
+
+The admin commerce panels and storefront checkout use the Drizzle commerce-tracking migration. Apply it with `npm run db:migrate` before deploying the corresponding app code. The migration links historical orders to carts when their recorded purchase event identifies one cart token.
+
+To exercise cart ordering, payment retries, fulfillment, and analytics without contacting a payment provider, run `psql -v ON_ERROR_STOP=1 -f tests/commerce-tracking.sql` against a migrated local PostgreSQL or Supabase database. The fixture runs inside a rolled-back transaction.
 - `npm run db:generate`: generate Drizzle migrations after schema changes
 
 ## Learn More

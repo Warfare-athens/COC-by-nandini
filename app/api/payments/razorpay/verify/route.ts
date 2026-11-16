@@ -1,91 +1,47 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { commerceConfigured } from "@/db";
 import { invoicePath } from "@/lib/invoice";
-import { confirmPaidOrder } from "@/lib/commerce";
+import { loadPaymentOrder, recordShopPayment } from "@/lib/commerce";
+import { razorpayGateway } from "@/lib/razorpay-gateway";
 
-const verifySchema = z.object({
-  orderNumber: z.string().min(5),
-  razorpay_order_id: z.string().min(1),
-  razorpay_payment_id: z.string().min(1),
-  razorpay_signature: z.string().optional(),
-  isDemo: z.boolean().optional(),
+const schema = z.object({
+  orderNumber: z.string().min(5).max(40),
+  razorpay_order_id: z.string().min(1).max(100),
+  razorpay_payment_id: z.string().min(1).max(100),
+  razorpay_signature: z.string().regex(/^[a-f0-9]{64}$/i),
 });
-
-function verifyRazorpaySignature(
-  orderId: string,
-  paymentId: string,
-  signature: string,
-  secret: string
-) {
-  const expected = createHmac("sha256", secret)
-    .update(`${orderId}|${paymentId}`)
-    .digest("hex");
-  const actualBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expected);
-  return (
-    actualBuffer.length === expectedBuffer.length &&
-    timingSafeEqual(actualBuffer, expectedBuffer)
-  );
-}
 
 export async function POST(request: Request) {
   try {
-    const input = verifySchema.parse(await request.json());
-    const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
-    const isDemo = Boolean(input.isDemo || input.razorpay_order_id.startsWith("order_demo_"));
-
-    if (!isDemo && keySecret) {
-      if (
-        !input.razorpay_signature ||
-        !verifyRazorpaySignature(
-          input.razorpay_order_id,
-          input.razorpay_payment_id,
-          input.razorpay_signature,
-          keySecret
-        )
-      ) {
-        return NextResponse.json(
-          { error: "Payment verification failed. Invalid signature." },
-          { status: 400 }
-        );
-      }
+    const input = schema.parse(await request.json());
+    const order = await loadPaymentOrder(input.orderNumber);
+    const orderId = order?.payment_provider_order_id;
+    if (!order || order.payment_method !== "razorpay" || !orderId || orderId !== input.razorpay_order_id) {
+      return NextResponse.json({ error: "Payment does not match the checkout." }, { status: 400 });
+    }
+    const { client, secret } = razorpayGateway();
+    const expected = createHmac("sha256", secret).update(orderId + "|" + input.razorpay_payment_id).digest();
+    if (!timingSafeEqual(Buffer.from(input.razorpay_signature, "hex"), expected)) {
+      return NextResponse.json({ error: "Payment verification failed." }, { status: 400 });
     }
 
-    if (!commerceConfigured()) {
-      return NextResponse.json({
-        success: true,
-        orderNumber: input.orderNumber,
-        invoiceUrl: `/invoice/${input.orderNumber}`,
-      });
+    const payment = await client.payments.fetch(input.razorpay_payment_id);
+    if (payment.order_id !== orderId || payment.currency !== "INR" || Number(payment.amount) !== Number(order.total_inr) * 100) {
+      return NextResponse.json({ error: "Payment does not match the checkout amount." }, { status: 400 });
     }
+    if (payment.status === "authorized") {
+      await recordShopPayment(order.id, orderId, "authorized", payment.id, payment);
+      return NextResponse.json({ status: "processing" }, { status: 202 });
+    }
+    if (payment.status !== "captured") return NextResponse.json({ error: "Payment has not been captured." }, { status: 409 });
 
-    const confirmedOrder = await confirmPaidOrder(
-      { orderNumber: input.orderNumber },
-      {
-        provider: "razorpay",
-        providerPaymentId: input.razorpay_payment_id,
-        providerOrderId: input.razorpay_order_id,
-        rawPayload: {
-          razorpay_order_id: input.razorpay_order_id,
-          razorpay_payment_id: input.razorpay_payment_id,
-          razorpay_signature: input.razorpay_signature || null,
-          isDemo,
-        },
-      }
-    );
-
-    const invoiceUrl = invoicePath(confirmedOrder.order_number, confirmedOrder.email);
-
-    return NextResponse.json({
-      success: true,
-      orderNumber: confirmedOrder.order_number,
-      invoiceUrl,
-      paymentId: input.razorpay_payment_id,
-    });
+    const confirmed = await recordShopPayment(order.id, orderId, "paid", payment.id, payment);
+    if (confirmed.status === "cancelled") {
+      return NextResponse.json({ error: "Payment received for a cancelled checkout. Contact support with your order reference." }, { status: 409 });
+    }
+    return NextResponse.json({ success: true, orderNumber: confirmed.order_number, invoiceUrl: invoicePath(confirmed.order_number, confirmed.email) });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Payment verification failed.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: "Unable to verify payment. Please try again." }, { status: error instanceof z.ZodError ? 400 : 503 });
   }
 }

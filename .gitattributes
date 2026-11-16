@@ -1,0 +1,2 @@
+# Preserve the checksum of the migration already applied to the database.
+drizzle/0006_left_phil_sheldon.sql -text

@@ -127,6 +127,7 @@ export default function SizePickerPopover({
         type="button"
         className={buttonClassName}
         onClick={handleMainClick}
+        data-commerce-action={isSingleSize ? "add_to_cart" : "choose_size"}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         style={{
@@ -223,6 +224,7 @@ export default function SizePickerPopover({
                   key={opt.size}
                   disabled={!opt.inStock}
                   onClick={(e) => handleSelectSize(e, opt)}
+                  data-commerce-action={opt.inStock ? "add_to_cart" : undefined}
                   style={{
                     minWidth: "36px",
                     height: "34px",

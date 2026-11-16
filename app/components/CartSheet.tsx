@@ -129,11 +129,6 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
   };
 
   const startCheckout = () => {
-    trackCommerceEvent("checkout_started", {
-      itemCount: totalCount,
-      subtotalInr: subtotal,
-      discountInr: discount,
-    });
     window.location.assign("/checkout");
   };
 
@@ -394,7 +389,7 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
                       </div>
                       <button
                         className="rounded px-2 py-1 text-[10px] font-semibold text-[#9c5953] transition hover:bg-[#faeae5] hover:text-[#b56560]"
-                        onClick={removeCoupon}
+                        onClick={removeCoupon} data-commerce-action="remove_coupon"
                       >
                         Remove
                       </button>
@@ -421,7 +416,7 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
                         />
                       </div>
                       <button
-                        type="submit"
+                        type="submit" data-commerce-action="apply_coupon"
                         disabled={isApplyingCoupon || !coupon.trim()}
                         className="rounded-lg border border-[#b56560] bg-[#b56560] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#9e524d] disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
                       >
@@ -542,6 +537,7 @@ export default function CartSheet({ open, onClose }: CartSheetProps) {
               <button
                 type="button"
                 className="cart-checkout-btn"
+                data-commerce-action="start_checkout"
                 style={{
                   background: "linear-gradient(135deg, #ba6a64 0%, #a6544e 50%, #8e3e38 100%)",
                   color: "#ffffff",

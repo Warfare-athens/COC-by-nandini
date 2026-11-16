@@ -13,7 +13,7 @@ export default async function AdminSettingsPage() {
   const initial = { announcementEnabled: Boolean(announcement?.is_enabled), announcementMessage: announcement?.message || "", announcementLink: announcement?.link_url || "", freeShippingThreshold: Number(values.free_shipping_threshold ?? 2999), shippingCharge: Number(values.shipping_charge ?? 149), codEnabled: values.cod_enabled !== false, maintenanceMode: Boolean(values.maintenance_mode), razorpayEnabled: Boolean(values.razorpay_enabled) };
   return (
     <>
-      <AdminPageHeader title="Store settings">Control announcements, delivery rules, payments, and storefront availability.</AdminPageHeader>
+      <AdminPageHeader title="Store settings" />
       <AdminSettingsForm initial={initial} />
     </>
   );

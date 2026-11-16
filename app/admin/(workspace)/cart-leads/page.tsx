@@ -1,2 +1,6 @@
-import AdminModulePage from "@/app/components/AdminModulePage";
-export default function Page() { return <AdminModulePage module="cart-leads" />; }
+import { AdminCartLeads } from "@/app/components/AdminCommercePanels";
+import { getAdminDays } from "@/lib/admin-time-server";
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+  return <AdminCartLeads days={await getAdminDays((await searchParams).days)} />;
+}

@@ -1,20 +1,17 @@
 import { AdminCreateForm, AdminRecordAction } from "@/app/components/AdminModuleActions";
-import AdminLiveRefresh from "@/app/components/AdminLiveRefresh";
-import WhatsAppRecoveryAction from "@/app/components/WhatsAppRecoveryAction";
 import { AdminEmptyState, AdminPageHeader, AdminPanel, AdminStatCard } from "@/app/components/AdminUI";
 import AdminReviewsManager from "@/app/components/AdminReviewsManager";
 import { commerceConfigured, getSupabaseAdmin } from "@/db";
 import { BLOG_POSTS } from "@/lib/blogs";
-import { COLLECTIONS } from "@/lib/collections";
 
-export type AdminModule = "ai-visibility" | "content" | "images" | "reviews" | "templates" | "partnerships" | "invoices" | "tracking" | "stock-requests" | "checkouts" | "cart-leads" | "coupon-leads" | "feedback" | "customers" | "login-activity" | "data-export";
+export type AdminModule = "content" | "images" | "reviews" | "templates" | "partnerships" | "invoices" | "tracking" | "stock-requests" | "coupon-leads" | "feedback" | "customers" | "login-activity" | "data-export";
 type Row = Record<string, unknown>;
 const text = (value: unknown) => String(value ?? "—");
 const date = (value: unknown) => value ? new Date(String(value)).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—";
 const money = (value: unknown) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 const statusClass = (value: unknown) => ["active", "approved", "published", "paid", "delivered", "resolved", "notified", "recovered", "converted"].includes(String(value)) ? "good" : ["rejected", "failed", "cancelled", "archived", "closed"].includes(String(value)) ? "bad" : "warn";
 
-function Head({ title, action }: { title: string; action?: React.ReactNode }) { const live = ["Checkouts", "Cart Leads"].includes(title); return <AdminPageHeader title={title} actions={action || (live ? <AdminLiveRefresh/> : null)} />; }
+function Head({ title, action }: { title: string; action?: React.ReactNode }) { return <AdminPageHeader title={title} actions={action} />; }
 function Kpis({ items }: { items: [string, React.ReactNode][] }) { return <div className="admin-kpis">{items.map(([label, value]) => <AdminStatCard label={label} value={value} key={label} />)}</div>; }
 function Empty({ label = "No records yet." }: { label?: string }) { return <AdminEmptyState title={label} />; }
 function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <AdminPanel title={title}>{children}</AdminPanel>; }
@@ -27,14 +24,6 @@ async function rows(table: string, select = "*", order = "created_at", limit = 2
 }
 
 export default async function AdminModulePage({ module }: { module: AdminModule }) {
-
-  if (module === "ai-visibility") {
-    const products = await rows("products", "id,status,seo_title,seo_description,hero_image_url,short_description,search_keywords", "updated_at");
-    const active = products.filter((item) => item.status === "active");
-    const complete = active.filter((item) => item.seo_title && item.seo_description && item.hero_image_url && item.short_description && item.search_keywords).length;
-    const score = active.length ? Math.round(complete / active.length * 100) : 0;
-    return <><Head title="AI Visibility"/><Kpis items={[["Visibility score", `${score}%`], ["Indexable products", active.length], ["Journal guides", BLOG_POSTS.length], ["Collections", COLLECTIONS.length]]}/><div className="admin-detail-grid"><Panel title="Search readiness"><div className="admin-summary-list"><div><span>Product metadata complete</span><b>{complete}/{active.length}</b></div><div><span>Product sitemap</span><b>Automatic</b></div><div><span>Structured product data</span><b>Enabled</b></div><div><span>Brand entity schema</span><b>Enabled</b></div><div><span>AI crawler guide</span><a href="/llms.txt" target="_blank">Open ↗</a></div><div><span>RSS feed</span><a href="/blog/rss.xml" target="_blank">Open ↗</a></div></div></Panel><Panel title="Coverage"><div style={{padding:22,display:"grid",placeItems:"center",gap:16}}><div className="admin-score">{score}</div><div className="admin-progress" style={{width:"100%"}}><span style={{width:`${score}%`}}/></div><a className="admin-small-button" href="/sitemap.xml" target="_blank">Open sitemap</a></div></Panel></div></>;
-  }
 
   if (module === "content") {
     const [entries, subscribers] = await Promise.all([
@@ -152,38 +141,6 @@ export default async function AdminModulePage({ module }: { module: AdminModule 
   if (module === "stock-requests") {
     const requests = await rows("stock_requests", "id,customer_name,email,phone,requested_size,status,created_at,products(name)");
     return <><Head title="Stock Requests"/><Kpis items={[["Requests",requests.length],["Waiting",requests.filter(r=>r.status==="requested").length],["Notified",requests.filter(r=>r.status==="notified").length],["Converted",requests.filter(r=>r.status==="converted").length]]}/><Panel title="Add request"><AdminCreateForm module="stock-requests"/></Panel><Panel title="Requests">{requests.length?<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Customer</th><th>Product / size</th><th>Date</th><th>Status</th><th>Update</th></tr></thead><tbody>{requests.map(row=><tr key={text(row.id)}><td><b>{text(row.customer_name)}</b><small className="admin-row-sub">{text(row.email)} · {text(row.phone)}</small></td><td>{text(row.requested_size)}</td><td>{date(row.created_at)}</td><td><span className={`admin-status ${statusClass(row.status)}`}>{text(row.status)}</span></td><td><AdminRecordAction module="stock-requests" id={text(row.id)} current={text(row.status)} options={["requested","contacted","notified","converted","closed"]}/></td></tr>)}</tbody></table></div>:<Empty/>}</Panel></>;
-  }
-
-  if (module === "checkouts") {
-    const [orders,carts,purchases] = await Promise.all([
-      rows("orders", "id,order_number,email,total_inr,status,payment_status,fulfillment_status,placed_at", "placed_at", 1000),
-      rows("carts", "id,anonymous_token,full_name,email,phone,status,checkout_step,source,medium,campaign,device,last_activity_at,created_at,cart_items(id,quantity,products(name,price_inr))", "last_activity_at", 1000),
-      rows("commerce_events", "anonymous_id,order_id,event_name,created_at", "created_at", 2000),
-    ]);
-    const cartByToken = new Map(carts.map((cart)=>[text(cart.anonymous_token),cart]));
-    const cartForOrder = new Map(purchases.filter((event)=>event.event_name==="purchase"&&event.order_id).map((event)=>[text(event.order_id),cartByToken.get(text(event.anonymous_id))]));
-    const live = carts.filter((cart)=>!["converted","closed","empty"].includes(text(cart.status)) && (cart.full_name || cart.email || cart.phone || cart.checkout_step));
-    return <><Head title="Checkouts"/><Kpis items={[["Completed",orders.length],["Live checkout drafts",live.length],["Dropped at payment",live.filter(r=>r.checkout_step==="payment").length],["Revenue",money(orders.reduce((sum,r)=>sum+Number(r.total_inr||0),0))]]}/><Panel title="Live checkout journeys">{live.length?<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Customer</th><th>Progress</th><th>Source</th><th>Status</th><th>Last activity</th><th>Journey</th></tr></thead><tbody>{live.map(row=><tr key={text(row.id)}><td><a className="admin-table-link" href={`/admin/checkouts/${text(row.id)}`}>{text(row.full_name)}</a><small className="admin-row-sub">{text(row.email)} · {text(row.phone)}</small></td><td><span className="admin-status warn">{text(row.checkout_step || "cart")}</span></td><td><b>{text(row.source || "direct")}</b><small className="admin-row-sub">{text(row.medium)} · {text(row.device)}</small></td><td><span className={`admin-status ${statusClass(row.status)}`}>{text(row.status)}</span></td><td data-date={text(row.last_activity_at)}>{date(row.last_activity_at)}</td><td><div style={{ display: "flex", alignItems: "center", gap: "6px" }}><a className="admin-small-button" href={`/admin/checkouts/${text(row.id)}`}>View journey</a><WhatsAppRecoveryAction cartId={text(row.id)} phone={text(row.phone)} customerName={text(row.full_name)} items={((row.cart_items || []) as Row[]).map((i) => { const rel = i.products as Row | Row[] | null; const p = Array.isArray(rel) ? rel[0] : rel; return { name: text(p?.name), quantity: Number(i.quantity || 1) }; })} currentStatus={text(row.status)} variant="compact"/></div></td></tr>)}</tbody></table></div>:<Empty label="No checkout drafts yet."/>}</Panel><Panel title="Recent completed checkouts">{orders.length?<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Order</th><th>Placed</th><th>Customer</th><th>Total</th><th>Payment</th><th>Open</th></tr></thead><tbody>{orders.map(row=>{const linkedCart=cartForOrder.get(text(row.id));return <tr key={text(row.id)}><td><b>{text(row.order_number)}</b></td><td data-date={text(row.placed_at)}>{date(row.placed_at)}</td><td>{text(row.email)}</td><td>{money(row.total_inr)}</td><td><span className={`admin-status ${statusClass(row.payment_status)}`}>{text(row.payment_status)}</span></td><td><a className="admin-small-button" href={linkedCart?`/admin/checkouts/${text(linkedCart.id)}`:`/admin/orders/${text(row.id)}`}>{linkedCart?"View journey":"Order details"}</a></td></tr>})}</tbody></table></div>:<Empty/>}</Panel></>;
-  }
-
-  if (module === "cart-leads") {
-    const [carts, cartEvents] = await Promise.all([
-      rows("carts", "id,anonymous_token,full_name,email,phone,status,checkout_step,source,medium,campaign,device,last_activity_at,created_at,cart_items(id,quantity,products(name,price_inr))", "last_activity_at", 1000),
-      rows("commerce_events", "id,anonymous_id,event_name,path,metadata,created_at", "created_at", 1000),
-    ]);
-    // Server-rendered operational cutoff; it must reflect the request time.
-    // eslint-disable-next-line react-hooks/purity
-    const staleBoundary = Date.now() - 60 * 60 * 1000;
-    const isStale = (row: Row) => !["converted","recovered","closed","empty"].includes(String(row.status)) && new Date(String(row.last_activity_at)).getTime() <= staleBoundary;
-    const value = (row: Row) => ((row.cart_items || []) as Row[]).reduce((sum,item) => {
-      const relation = item.products as Row | Row[] | null;
-      const product = Array.isArray(relation) ? relation[0] : relation;
-      return sum + Number(item.quantity || 0) * Number(product?.price_inr || 0);
-    }, 0);
-    const identified = carts.filter(row => row.full_name || row.email || row.phone);
-    const contactable = carts.filter(row => row.email || row.phone);
-    const recoverableValue = carts.filter(row => (row.email || row.phone) && !["converted","recovered","closed","empty"].includes(String(row.status)) && (isStale(row) || ["checkout","abandoned","contacted"].includes(String(row.status)))).reduce((sum,row)=>sum+value(row),0);
-    return <><Head title="Cart Leads"/><Kpis items={[["Tracked carts",carts.length],["Identified",identified.length],["Contactable",contactable.length],["Recoverable value",money(recoverableValue)]]}/><Panel title="Cart activity">{carts.length?<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Lead</th><th>Contact</th><th>Source</th><th>Items</th><th>Value</th><th>Status</th><th>Last activity</th><th>Journey</th><th>Follow up</th></tr></thead><tbody>{carts.map(row=>{const items=(row.cart_items||[]) as Row[];const displayStatus=isStale(row)?"stale":text(row.status);return <tr key={text(row.id)}><td><a className="admin-table-link" href={`/admin/cart-leads/${text(row.id)}`}>{text(row.full_name || text(row.anonymous_token).slice(0,12))}</a><small className="admin-row-sub">{items.map(item=>{const relation=item.products as Row|Row[]|null;const product=Array.isArray(relation)?relation[0]:relation;return text(product?.name)}).filter(name=>name!=="—").join(", ")||"No items"}</small></td><td><b>{text(row.email)}</b><small className="admin-row-sub">{text(row.phone)}</small></td><td><b>{text(row.source || "direct")}</b><small className="admin-row-sub">{text(row.medium)} · {text(row.device)}</small></td><td>{items.reduce((sum,item)=>sum+Number(item.quantity||0),0)}</td><td><b>{money(value(row))}</b></td><td><span className={`admin-status ${displayStatus==="stale"?"warn":statusClass(displayStatus)}`}>{displayStatus}</span><small className="admin-row-sub">{text(row.checkout_step || "cart")}</small></td><td data-date={text(row.last_activity_at)}>{date(row.last_activity_at)}</td><td><a className="admin-small-button" href={`/admin/cart-leads/${text(row.id)}`}>View journey</a></td><td style={{ minWidth: "220px" }}><div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}><WhatsAppRecoveryAction cartId={text(row.id)} phone={text(row.phone)} customerName={text(row.full_name)} items={items.map((i) => { const rel = i.products as Row | Row[] | null; const p = Array.isArray(rel) ? rel[0] : rel; return { name: text(p?.name), quantity: Number(i.quantity || 1) }; })} currentStatus={text(row.status)} variant="compact"/><AdminRecordAction module="carts" id={text(row.id)} current={text(row.status)} options={["active","contacted","recovered","abandoned","closed"]}/></div></td></tr>})}</tbody></table></div>:<Empty label="No server-side carts yet."/>}</Panel><Panel title="Tracking health"><div className="admin-summary-list"><div><span>Add-to-cart events</span><b>{cartEvents.filter(row=>row.event_name==="add_to_cart").length}</b></div><div><span>Cart views</span><b>{cartEvents.filter(row=>row.event_name==="cart_viewed").length}</b></div><div><span>Checkout field updates</span><b>{cartEvents.filter(row=>row.event_name==="checkout_field_updated").length}</b></div><div><span>Checkout starts</span><b>{new Set(cartEvents.filter(row=>row.event_name==="checkout_started").map(row=>row.anonymous_id)).size}</b></div><div><span>Captured checkout contacts</span><b>{new Set(cartEvents.filter(row=>row.event_name==="checkout_contact_captured").map(row=>row.anonymous_id)).size}</b></div><div><span>Checkout errors</span><b>{cartEvents.filter(row=>row.event_name==="checkout_failed").length}</b></div></div></Panel></>;
   }
 
   if (module === "coupon-leads") {

@@ -1,14 +1,10 @@
 import type { ReactNode } from "react";
 import { AlertCircle, Inbox, Search } from "lucide-react";
 
-export function AdminBreadcrumbs({ items }: { items: Array<{ label: string; href?: string }> }) {
-  return <nav className="admin-breadcrumbs" aria-label="Breadcrumb">{items.map((item, index) => <span key={`${item.label}-${index}`}>{index > 0 && <i aria-hidden="true">/</i>}{item.href ? <a href={item.href}>{item.label}</a> : <b aria-current="page">{item.label}</b>}</span>)}</nav>;
-}
-
-export function AdminPageHeader({ eyebrow, title, actions, children }: { eyebrow?: string; title: string; actions?: ReactNode; children?: ReactNode }) {
+export function AdminPageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
   return <>
-    {title !== "Overview" && <AdminBreadcrumbs items={[{ label: "Overview", href: "/admin" }, { label: title }]} />}
-    <header className="admin-page-header"><div>{eyebrow && <span className="admin-page-eyebrow">{eyebrow}</span>}<h1>{title}</h1>{children && <div className="admin-page-summary">{children}</div>}</div>{actions && <div className="admin-page-actions">{actions}</div>}</header>
+    <h1 className="sr-only">{title}</h1>
+    {actions && <div className="admin-page-tools">{actions}</div>}
   </>;
 }
 
@@ -20,8 +16,20 @@ export function AdminPanel({ title, description, actions, children, className = 
   return <section className={`admin-panel ${className}`.trim()}>{(title || actions) && <div className="admin-panel-head"><div>{title && <h2>{title}</h2>}{description && <p>{description}</p>}</div>{actions}</div>}{children}</section>;
 }
 
-export function AdminDataTable({ columns, children, className = "" }: { columns: ReactNode[]; children: ReactNode; className?: string }) {
-  return <div className="admin-table-wrap"><table className={`admin-table ${className}`.trim()}><thead><tr>{columns.map((column, index) => <th key={index}>{column}</th>)}</tr></thead><tbody>{children}</tbody></table></div>;
+export function AdminDataTable({ columns, children, className = "", dateFiltered }: { columns: ReactNode[]; children: ReactNode; className?: string; dateFiltered?: boolean }) {
+  return <div className="admin-table-wrap"><table className={`admin-table ${className}`.trim()} data-admin-date-filtered={dateFiltered || undefined}><thead><tr>{columns.map((column, index) => <th key={index} scope="col">{column}</th>)}</tr></thead><tbody>{children}</tbody></table></div>;
+}
+
+export function AdminCustomerLines({ name, email, phone, address, status }: { name?: unknown; email?: unknown; phone?: unknown; address: Record<string, unknown>; status?: ReactNode }) {
+  const line = (...values: unknown[]) => values.filter(Boolean).map(String).join(", ");
+  const addressLines = [line(address.line1), line(address.line2), line(address.city, address.state, address.postal_code), line(address.country)].filter(Boolean);
+  return <div className="admin-customer-lines">
+    {Boolean(name) && <strong>{String(name)}</strong>}
+    {Boolean(email) && <span>{String(email)}</span>}
+    {Boolean(phone) && <span>{String(phone)}</span>}
+    {addressLines.length > 0 && <address>{addressLines.map((value, index) => <div key={index}>{value}</div>)}</address>}
+    {status && <div className="admin-commerce-actions">{status}</div>}
+  </div>;
 }
 
 export function AdminToolbar({ searchPlaceholder = "Search…", children }: { searchPlaceholder?: string; children?: ReactNode }) {

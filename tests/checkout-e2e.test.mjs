@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
-const env = Object.fromEntries(
+const enabled = process.env.RUN_CHECKOUT_SANDBOX === "1";
+const env = enabled ? Object.fromEntries(
   fs
     .readFileSync(".env.local", "utf8")
     .split("\n")
@@ -12,19 +13,22 @@ const env = Object.fromEntries(
       const [k, ...v] = l.split("=");
       return [k.trim(), v.join("=").trim()];
     })
-);
+) : {};
 
-const supabase = createClient(
+const runSandbox = enabled && env.RAZORPAY_KEY_ID?.startsWith("rzp_test_");
+const checkoutTest = runSandbox ? test : test.skip;
+
+const supabase = runSandbox ? createClient(
   env.NEXT_PUBLIC_SUPABASE_URL,
   env.SUPABASE_SERVICE_ROLE_KEY
-);
+) : null;
 
 const testEmail = `test_${Date.now()}@example.com`;
 let createdOrderNumber = "";
 let createdTotalInr = 0;
 let razorpayOrderId = "";
 
-test("1. Places an order with Razorpay payment method via POST /api/checkout", async () => {
+checkoutTest("1. Places an order with Razorpay payment method via POST /api/checkout", async () => {
   const res = await fetch("http://localhost:3000/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -62,7 +66,7 @@ test("1. Places an order with Razorpay payment method via POST /api/checkout", a
   createdTotalInr = data.totalInr;
 });
 
-test("2. Creates a Razorpay provider order via POST /api/payments/razorpay/order", async () => {
+checkoutTest("2. Creates a Razorpay provider order via POST /api/payments/razorpay/order", async () => {
   assert.ok(createdOrderNumber, "Order number must be set");
 
   const rzpRes = await fetch("http://localhost:3000/api/payments/razorpay/order", {
@@ -85,38 +89,22 @@ test("2. Creates a Razorpay provider order via POST /api/payments/razorpay/order
   razorpayOrderId = rzpData.razorpayOrderId;
 });
 
-test("3. Verifies Razorpay payment via POST /api/payments/razorpay/verify and marks order as paid", async () => {
+checkoutTest("3. Keeps the Razorpay draft unpaid until capture", async () => {
   assert.ok(createdOrderNumber, "Order number must be set");
   assert.ok(razorpayOrderId, "Razorpay order ID must be set");
-
-  const verifyRes = await fetch("http://localhost:3000/api/payments/razorpay/verify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      orderNumber: createdOrderNumber,
-      razorpay_order_id: razorpayOrderId,
-      razorpay_payment_id: "pay_test_" + Date.now(),
-      isDemo: true,
-    }),
-  });
-
-  assert.equal(verifyRes.status, 200, "Expected 200 OK from /api/payments/razorpay/verify");
-  const verifyData = await verifyRes.json();
-  assert.equal(verifyData.success, true);
-  assert.equal(verifyData.orderNumber, createdOrderNumber);
-
-  // Verify order status in Supabase database
-  const { data: dbOrder } = await supabase
+  const { data: order, error } = await supabase
     .from("orders")
-    .select("order_number, payment_status, status, total_inr")
+    .select("payment_status,status,payment_provider_order_id,confirmed_at")
     .eq("order_number", createdOrderNumber)
     .single();
-
-  assert.equal(dbOrder.payment_status, "paid", "Database order payment_status must be paid");
-  assert.equal(dbOrder.status, "confirmed", "Database order status must be confirmed");
+  assert.ifError(error);
+  assert.equal(order.payment_provider_order_id, razorpayOrderId);
+  assert.equal(order.payment_status, "payment_pending");
+  assert.equal(order.status, "pending_payment");
+  assert.equal(order.confirmed_at, null);
 });
 
-test("4. Places a Cash on Delivery (COD) order via POST /api/checkout", async () => {
+checkoutTest("4. Places a Cash on Delivery (COD) order via POST /api/checkout", async () => {
   const res = await fetch("http://localhost:3000/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -159,7 +147,7 @@ test("4. Places a Cash on Delivery (COD) order via POST /api/checkout", async ()
   assert.equal(dbOrder.status, "confirmed");
 });
 
-test("5. Order lookup works for tracking on /api/orders/lookup", async () => {
+checkoutTest("5. Order lookup works for tracking on /api/orders/lookup", async () => {
   assert.ok(createdOrderNumber, "Order number must be set");
 
   const res = await fetch("http://localhost:3000/api/orders/lookup", {

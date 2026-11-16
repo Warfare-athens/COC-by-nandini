@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity, BadgePercent, Boxes, ClipboardCheck, FileText, GalleryHorizontalEnd,
   Handshake, Image, LayoutDashboard, LogIn, MessageSquare, PackageSearch,
-  ReceiptText, Settings, ShoppingBag, ShoppingCart, Sparkles, Star, Store, Truck, Users,
+  ChartNoAxesCombined, ReceiptText, Settings, ShoppingBag, ShoppingCart, Star, Store, Truck, Users,
 } from "lucide-react";
 
 export type AdminNavigationItem = {
@@ -13,8 +13,8 @@ export type AdminNavigationItem = {
 };
 
 export const adminNavigation: AdminNavigationItem[] = [
-  { label: "Overview", href: "/admin", icon: LayoutDashboard, aliases: ["dashboard", "command center", "analytics"] },
-  { label: "AI Visibility", href: "/admin/ai-visibility", icon: Sparkles, aliases: ["seo", "aeo", "search"] },
+  { label: "Overview", href: "/admin", icon: LayoutDashboard, aliases: ["dashboard", "command center"] },
+  { label: "Analytics", href: "/admin/analytics", icon: ChartNoAxesCombined, aliases: ["traffic", "ai visibility", "seo", "aeo", "search"] },
   { label: "Products", href: "/admin/products", icon: ShoppingBag, aliases: ["catalog", "inventory"] },
   { label: "Content", href: "/admin/content", icon: FileText, aliases: ["blogs", "journal"] },
   { label: "Images", href: "/admin/images", icon: Image, aliases: ["media", "library"] },

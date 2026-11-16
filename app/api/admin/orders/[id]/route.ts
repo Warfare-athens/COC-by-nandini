@@ -4,27 +4,33 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/db";
+import { cartApiError } from "@/lib/commerce-cart";
 
 const schema = z.object({
-  status: z.enum(["pending", "confirmed", "cancelled", "completed", "returned"]),
+  status: z.enum(["pending", "pending_payment", "confirmed", "cancelled", "completed", "returned"]).optional(),
   fulfillmentStatus: z.enum(["unfulfilled", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled", "returned"]),
-  carrier: z.string().max(100).optional().nullable(), trackingNumber: z.string().max(150).optional().nullable(),
-  trackingUrl: z.union([z.string().url(), z.literal("")]).optional().nullable(),
+  carrier: z.string().trim().max(100).nullable().optional(),
+  trackingNumber: z.string().trim().max(150).nullable().optional(),
+  trackingUrl: z.union([z.url({ protocol: /^https?$/ }), z.literal("")]).nullable().optional(),
 });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const { id } = await params; const input = schema.parse(await request.json()); const supabase = getSupabaseAdmin();
-    const { error: orderError } = await supabase.from("orders").update({ status: input.status, fulfillment_status: input.fulfillmentStatus, updated_at: new Date().toISOString() }).eq("id", id);
-    if (orderError) throw orderError;
-    const fulfillmentUpdate: Record<string, unknown> = { status: input.fulfillmentStatus, carrier: input.carrier || null, tracking_number: input.trackingNumber || null, tracking_url: input.trackingUrl || null, updated_at: new Date().toISOString() };
-    if (input.fulfillmentStatus === "shipped") fulfillmentUpdate.shipped_at = new Date().toISOString();
-    if (input.fulfillmentStatus === "delivered") fulfillmentUpdate.delivered_at = new Date().toISOString();
-    const { data: fulfillment, error: fulfillmentError } = await supabase.from("fulfillments").update(fulfillmentUpdate).eq("order_id", id).select("id").maybeSingle();
-    if (fulfillmentError) throw fulfillmentError;
-    if (fulfillment) await supabase.from("tracking_events").insert({ fulfillment_id: fulfillment.id, status: input.fulfillmentStatus, message: `Order updated to ${input.fulfillmentStatus.replaceAll("_", " ")}.` });
-    await supabase.from("audit_logs").insert({ actor: "admin", action: "order.updated", entity_type: "order", entity_id: id, metadata: input });
+    const { id } = await params;
+    const input = schema.parse(await request.json());
+    const tracking = {
+      ...(input.carrier !== undefined && { carrier: input.carrier || null }),
+      ...(input.trackingNumber !== undefined && { tracking_number: input.trackingNumber || null }),
+      ...(input.trackingUrl !== undefined && { tracking_url: input.trackingUrl || null }),
+    };
+    const { data, error } = await getSupabaseAdmin().rpc("admin_update_shop_order", {
+      p_id: id, p_status: input.status || null, p_fulfillment: input.fulfillmentStatus, p_tracking: tracking,
+    });
+    if (error) throw error;
+    if (!data) return NextResponse.json({ error: "Order not found" }, { status: 404 });
     return NextResponse.json({ ok: true });
-  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to update order" }, { status: 400 }); }
+  } catch (error) {
+    return NextResponse.json({ error: cartApiError(error, "Unable to update order") }, { status: 400 });
+  }
 }

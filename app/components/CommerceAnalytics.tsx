@@ -1,47 +1,41 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { trackCommerceEvent } from "../analytics-helper";
+import { commerceActionLabels } from "@/lib/commerce-actions";
+import { getCommerceAttribution, trackCommerceEvent } from "../analytics-helper";
 
 export default function CommerceAnalytics() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const search = searchParams.toString();
 
   useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
-    const key = `coc-view:${pathname}?${search}`;
+    if (!pathname || pathname.startsWith("/admin")) return;
     const timer = window.setTimeout(() => {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-      const params = new URLSearchParams(search);
-      let referringHost = "direct";
-      try { referringHost = document.referrer ? new URL(document.referrer).hostname : "direct"; } catch { referringHost = "direct"; }
-      const source = params.get("utm_source") || sessionStorage.getItem("coc-source") || referringHost;
-      const medium = params.get("utm_medium") || sessionStorage.getItem("coc-medium") || (source === "direct" ? "none" : "referral");
-      const campaign = params.get("utm_campaign") || sessionStorage.getItem("coc-campaign") || "none";
-      sessionStorage.setItem("coc-source", source);
-      sessionStorage.setItem("coc-medium", medium);
-      sessionStorage.setItem("coc-campaign", campaign);
-      if (!sessionStorage.getItem("coc-landing")) sessionStorage.setItem("coc-landing", `${pathname}${search ? `?${search}` : ""}`);
-      if (!sessionStorage.getItem("coc-referrer")) sessionStorage.setItem("coc-referrer", document.referrer || "");
-      const attribution = { source, medium, campaign, device: window.innerWidth < 768 ? "mobile" : window.innerWidth < 1100 ? "tablet" : "desktop" };
+      const attribution = getCommerceAttribution();
       trackCommerceEvent("page_view", attribution);
-      if (pathname.startsWith("/product/")) trackCommerceEvent("product_view", { ...attribution, slug: pathname.split("/").filter(Boolean).pop() || "product" });
-      if (pathname === "/checkout") trackCommerceEvent("checkout_started");
+      if (pathname.startsWith("/product/")) {
+        const slug = pathname.split("/").filter(Boolean).at(-1) || "";
+        const productId = document.querySelector<HTMLElement>("[data-commerce-product]")?.dataset.commerceProduct;
+        trackCommerceEvent("product_view", { ...attribution, slug }, productId);
+      }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [pathname, search]);
+  }, [pathname]);
 
   useEffect(() => {
+    if (!pathname || pathname.startsWith("/admin")) return;
     const onClick = (event: MouseEvent) => {
-      const anchor = (event.target as Element | null)?.closest("a");
-      if (anchor?.href.includes("wa.me/")) trackCommerceEvent("whatsapp_started");
+      if (!(event.target instanceof Element)) return;
+      const control = event.target.closest<HTMLElement>("button, a, [role=button]");
+      if (!control || control.matches(":disabled, [aria-disabled=true]")) return;
+      const whatsapp = control instanceof HTMLAnchorElement && /(^|\.)wa\.me$/.test(control.hostname);
+      const action = control.dataset.commerceAction || (whatsapp ? "whatsapp" : "");
+      if (Object.hasOwn(commerceActionLabels, action)) trackCommerceEvent("button_clicked", { action });
+      if (whatsapp) trackCommerceEvent("whatsapp_started");
     };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
-  }, []);
+  }, [pathname]);
 
   return null;
 }

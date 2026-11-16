@@ -250,7 +250,7 @@ export default function Header({ activeTab }: HeaderProps) {
     <>
       {announcement && <div className="shipping">✦ &nbsp; {announcement} &nbsp; ✦</div>}
       <header className="nav" style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr" }}>
-        <button className="icon-button menu-trigger" aria-label="Open menu" onClick={() => setMenuOpen(true)} style={{ display: "grid", placeItems: "center", justifySelf: "start" }}>
+        <button className="icon-button menu-trigger" aria-label="Open menu" data-commerce-action="open_menu" onClick={() => setMenuOpen(true)} style={{ display: "grid", placeItems: "center", justifySelf: "start" }}>
           <svg aria-hidden="true" width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="#3a2926" strokeWidth="1.8" strokeLinecap="round">
             <path d="M1 3h30" />
             <path d="M1 12h21" />
@@ -262,19 +262,19 @@ export default function Header({ activeTab }: HeaderProps) {
           <Signature />
         </a>
         <div className="actions" style={{ gridColumn: 3, justifySelf: "end" }}>
-          <button className="icon-button" aria-label="Search" onClick={() => setSearch(!search)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <button className="icon-button" aria-label="Search" data-commerce-action="search" onClick={() => setSearch(!search)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
           </button>
-          <a href="/account" className="icon-button" aria-label="My Account & Orders" title="My Account & Orders" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <a href="/account" className="icon-button" aria-label="My Account & Orders" title="My Account & Orders" data-commerce-action="account" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
           </a>
-          <button className="bag" aria-label="Cart" onClick={() => setCartOpen(true)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+          <button className="bag" aria-label="Cart" data-commerce-action="open_cart" onClick={() => setCartOpen(true)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
               <line x1="3" y1="6" x2="21" y2="6"></line>

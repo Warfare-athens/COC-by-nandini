@@ -34,16 +34,25 @@ export async function PATCH(request: Request) {
   try {
     const { module, id, status } = requestSchema.parse(await request.json());
     if (!id || !status) return NextResponse.json({ error: "Missing record or status" }, { status: 400 });
+    const supabase = getSupabaseAdmin();
+    if (module === "carts") {
+      if (!["active", "contacted", "recovered", "abandoned", "closed"].includes(status)) return NextResponse.json({ error: "Invalid cart status" }, { status: 400 });
+      const { data: cart, error } = await supabase.from("carts").update({ status, updated_at: new Date().toISOString() })
+        .eq("id", id).not("status", "in", "(converted,empty)").select("anonymous_token").maybeSingle();
+      if (error) throw error;
+      if (!cart) return NextResponse.json({ error: "This cart is closed for follow-up." }, { status: 409 });
+      await supabase.from("commerce_events").insert({ anonymous_id: cart.anonymous_token, event_name: "cart_status_updated", metadata: { status } });
+      return NextResponse.json({ ok: true });
+    }
     const map: Record<string, { table: string; column: string; extra?: Record<string, unknown> }> = {
       reviews: { table: "product_reviews", column: "status" }, feedback: { table: "customer_feedback", column: "status" },
       partnerships: { table: "partnerships", column: "status" }, "stock-requests": { table: "stock_requests", column: "status", extra: status === "notified" ? { notified_at: new Date().toISOString() } : {} },
       content: { table: "content_entries", column: "status", extra: status === "published" ? { published_at: new Date().toISOString() } : {} },
       templates: { table: "admin_templates", column: "is_active" }, coupons: { table: "promotions", column: "is_active" },
-      carts: { table: "carts", column: "status" },
     };
     const target = map[module]; if (!target) return NextResponse.json({ error: "Unknown module" }, { status: 400 });
     const value: string | boolean = target.column === "is_active" ? status === "active" : status;
-    const supabase = getSupabaseAdmin(); const { error } = await supabase.from(target.table).update({ [target.column]: value, ...(target.extra || {}), updated_at: new Date().toISOString() }).eq("id", id);
+    const { error } = await supabase.from(target.table).update({ [target.column]: value, ...(target.extra || {}), updated_at: new Date().toISOString() }).eq("id", id);
     if (error) throw error;
     await supabase.from("audit_logs").insert({ actor: "admin", action: `${module}.updated`, entity_type: module, entity_id: id, metadata: { status } });
     return NextResponse.json({ ok: true });

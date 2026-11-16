@@ -1,5 +1,5 @@
 import { showGlobalStatus } from "./global-status";
-import { trackCommerceEvent } from "./analytics-helper";
+import { getAnonymousId, getCommerceAttribution, getVisitorId, trackCommerceEvent } from "./analytics-helper";
 
 export interface CartItem {
   productId?: string;
@@ -12,23 +12,36 @@ export interface CartItem {
 }
 
 export function getCartToken() {
-  if (typeof window === "undefined") return "";
-  let token = localStorage.getItem("coc-cart-token");
-  if (!token) { token = crypto.randomUUID(); localStorage.setItem("coc-cart-token", token); }
-  return token;
+  return getAnonymousId();
 }
 
-function syncCart(items: CartItem[]) {
-  const anonymousToken = getCartToken(); if (!anonymousToken) return;
-  fetch("/api/cart/sync", {
+export function nextCartRevision() {
+  const key = "coc-cart-revision";
+  const revision = Math.max(Date.now(), Number(localStorage.getItem(key) || 0) + 1);
+  localStorage.setItem(key, String(revision));
+  return revision;
+}
+
+export async function syncCart(items: CartItem[]): Promise<boolean> {
+  const anonymousToken = getCartToken();
+  const response = await fetch("/api/cart/sync", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       anonymousToken,
+      revision: nextCartRevision(),
+      attribution: getCommerceAttribution(),
       items: items.map(({ productId, name, size, color, quantity }) => ({ productId, name, size, color, quantity }))
     }),
     keepalive: true
-  }).catch(() => undefined);
+  });
+  if (!response.ok || !items.length) return false;
+  const { legacy } = await response.json();
+  if (!legacy || getCartToken() !== anonymousToken) return false;
+  getVisitorId();
+  localStorage.removeItem("coc-cart-token");
+  await syncCart(getCartItems());
+  return true;
 }
 
 export function getCartItems(): CartItem[] {
@@ -46,24 +59,34 @@ export function saveCartItems(items: CartItem[]) {
   try {
     localStorage.setItem("coc-cart-items", JSON.stringify(items));
     window.dispatchEvent(new Event("coc-cart-updated"));
-    syncCart(items);
+    void syncCart(items).catch(() => undefined);
   } catch (e) {
     console.error(e);
   }
 }
 
-export function clearCartAfterCheckout() {
+function sameCartItem(a: CartItem, b: CartItem) {
+  return (a.productId && b.productId ? a.productId === b.productId : a.name === b.name) && a.size === b.size && (a.color || "") === (b.color || "");
+}
+
+export function clearCartAfterCheckout(completedToken: string, purchased: CartItem[]) {
   if (typeof window === "undefined") return;
-  localStorage.removeItem("coc-cart-items");
+  if (getCartToken() !== completedToken) return;
+  getVisitorId();
+  localStorage.removeItem("coc-cart-token");
   localStorage.removeItem("coc-applied-coupon");
-  window.dispatchEvent(new Event("coc-cart-updated"));
+  const remaining = getCartItems().map((item) => ({ ...item, quantity: item.quantity - (purchased.find((line) => sameCartItem(item, line))?.quantity || 0) }))
+    .filter((item) => item.quantity > 0);
+  if (remaining.length) saveCartItems(remaining);
+  else {
+    localStorage.removeItem("coc-cart-items");
+    window.dispatchEvent(new Event("coc-cart-updated"));
+  }
 }
 
 export function addToCart(item: Omit<CartItem, "quantity">) {
   const items = getCartItems();
-  const existing = items.find(
-    (i) => i.name === item.name && i.size === item.size && (i.color || "") === (item.color || "")
-  );
+  const existing = items.find((line) => sameCartItem(line, { ...item, quantity: 1 }));
   if (existing) {
     existing.quantity += 1;
   } else {
@@ -77,7 +100,7 @@ export function addToCart(item: Omit<CartItem, "quantity">) {
 
 export function removeFromCart(name: string, size: string, color?: string) {
   const items = getCartItems();
-  const match = (i: CartItem) => i.name === name && i.size === size && (!color || (i.color || "") === color);
+  const match = (i: CartItem) => i.name === name && i.size === size && (i.color || "") === (color || "");
   const removed = items.find(match);
   const filtered = items.filter((i) => !match(i));
   saveCartItems(filtered);
@@ -87,7 +110,7 @@ export function removeFromCart(name: string, size: string, color?: string) {
 
 export function updateQuantity(name: string, size: string, delta: number, color?: string) {
   const items = getCartItems();
-  const match = (i: CartItem) => i.name === name && i.size === size && (!color || (i.color || "") === color);
+  const match = (i: CartItem) => i.name === name && i.size === size && (i.color || "") === (color || "");
   const existing = items.find(match);
   if (existing) {
     existing.quantity += delta;

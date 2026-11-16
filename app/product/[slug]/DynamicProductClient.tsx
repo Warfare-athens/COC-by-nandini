@@ -318,7 +318,7 @@ export default function DynamicProductClient({
   }, [displaySizeLabels, size]);
 
   return (
-    <main>
+    <main data-commerce-product={product.id}>
       <Header />
       <div className="breadcrumbs">
         <a href="/">Home</a>
@@ -480,7 +480,7 @@ export default function DynamicProductClient({
             ref={mainBuyButtonRef}
             className="detail-add"
             type="button"
-            onClick={add}
+            onClick={add} data-commerce-action="add_to_cart"
             disabled={!canBuy}
           >
             {!available.length
@@ -494,7 +494,7 @@ export default function DynamicProductClient({
           <button
             className="detail-buy"
             type="button"
-            onClick={buyNow}
+            onClick={buyNow} data-commerce-action="buy_now"
             disabled={!canBuy}
           >
             Buy now
@@ -527,7 +527,7 @@ export default function DynamicProductClient({
             </h2>
           </div>
           <button
-            className="review-toggle"
+            className="review-toggle" data-commerce-action={reviewOpen ? undefined : "write_review"}
             type="button"
             aria-expanded={reviewOpen}
             disabled={reviewBusy || reviewImageBusy}

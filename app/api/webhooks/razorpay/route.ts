@@ -3,6 +3,8 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getSupabaseAdmin, commerceConfigured } from "@/db";
+import { recordShopPayment } from "@/lib/commerce";
+import { razorpayGateway } from "@/lib/razorpay-gateway";
 
 function validSignature(rawBody: string, signature: string, secret: string) {
   try {
@@ -89,85 +91,22 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseAdmin();
 
-    // 1. Audit Log: Persist every incoming event in webhook_events
-    await supabase.from("webhook_events").insert({
-      provider: "razorpay",
-      external_id: externalId,
-      event_type: eventName,
-      payload,
-      processed_at: new Date().toISOString(),
-    });
-
-    // 2. Handle Payment Statuses
-    if (eventName === "order.paid" || eventName === "payment.captured" || payment?.status === "captured") {
-      if (orderId) {
-        await supabase
-          .from("payments")
-          .update({
-            status: "paid",
-            provider_payment_id: paymentId || null,
-            raw_payload: payload,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("provider_order_id", orderId);
-      }
-
-      // Identify order to confirm
-      let orderNumber = "";
-      if (orderId) {
-        const { data: ord } = await supabase
-          .from("orders")
-          .select("order_number")
-          .eq("payment_provider_order_id", orderId)
-          .maybeSingle();
-
-        if (ord?.order_number) {
-          orderNumber = ord.order_number;
+    // Only payment events for a stored gateway order can change a shop order.
+    if (orderId && ["order.paid", "payment.captured", "payment.failed", "payment.authorized"].includes(eventName)) {
+      const { data: shopOrder, error: readError } = await supabase.from("orders")
+        .select("id,total_inr").eq("payment_provider_order_id", orderId).eq("payment_method", "razorpay").maybeSingle();
+      if (readError) throw readError;
+      if (shopOrder) {
+        const paid = eventName === "order.paid" || eventName === "payment.captured";
+        const gatewayPayment = paid && !payment?.id
+          ? (await razorpayGateway().client.orders.fetchPayments(orderId)).items.find((entry) => entry.status === "captured")
+          : payment;
+        if (paid && (!gatewayPayment?.id || gatewayPayment.order_id !== orderId || gatewayPayment.currency !== "INR" ||
+            Number(gatewayPayment.amount) !== Number(shopOrder.total_inr) * 100 || gatewayPayment.status !== "captured")) {
+          throw new Error("Gateway capture could not be verified for the stored order.");
         }
-      }
-
-      if (!orderNumber) {
-        const receipt = order?.receipt || (payment?.notes as any)?.orderNumber || (order?.notes as any)?.orderNumber;
-        if (typeof receipt === "string" && receipt.trim()) {
-          orderNumber = receipt.trim();
-        }
-      }
-
-      if (orderNumber) {
-        const { confirmPaidOrder } = await import("@/lib/commerce");
-        await confirmPaidOrder(
-          { orderNumber },
-          {
-            provider: "razorpay",
-            providerPaymentId: paymentId || `pay_wh_${Date.now()}`,
-            providerOrderId: orderId,
-            rawPayload: payload,
-          }
-        ).catch((err) => console.error("Webhook confirmPaidOrder error:", err));
-      }
-    } else if (eventName === "payment.failed" || payment?.status === "failed") {
-      if (orderId) {
-        await supabase
-          .from("payments")
-          .update({
-            status: "failed",
-            provider_payment_id: paymentId || null,
-            raw_payload: payload,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("provider_order_id", orderId);
-      }
-    } else if (eventName === "payment.authorized") {
-      if (orderId) {
-        await supabase
-          .from("payments")
-          .update({
-            status: "authorized",
-            provider_payment_id: paymentId || null,
-            raw_payload: payload,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("provider_order_id", orderId);
+        await recordShopPayment(shopOrder.id, orderId, paid ? "paid" : eventName === "payment.failed" ? "failed" : "authorized",
+          gatewayPayment?.id, payload);
       }
     }
 
@@ -215,12 +154,19 @@ export async function POST(request: Request) {
       }
     }
 
+    await supabase.from("webhook_events").insert({
+      provider: "razorpay",
+      external_id: externalId,
+      event_type: eventName,
+      payload,
+      processed_at: new Date().toISOString(),
+    });
     return NextResponse.json({ ok: true, received: eventName });
   } catch (error) {
     console.error("Webhook processing error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Webhook processing failed." },
-      { status: 400 }
+      { error: "Webhook processing failed." },
+      { status: 500 }
     );
   }
 }

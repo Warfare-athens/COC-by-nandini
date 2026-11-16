@@ -1,20 +1,17 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { CartItem, clearCartAfterCheckout, getCartItems, getCartToken } from "../cart-helper";
+import { CartItem, clearCartAfterCheckout, getCartItems, getCartToken, nextCartRevision, syncCart } from "../cart-helper";
 import { Signature } from "../components/Signature";
-import { trackCommerceEvent } from "../analytics-helper";
+import { getCommerceAttribution, trackCommerceEvent } from "../analytics-helper";
 import {
   ShieldCheck,
   Truck,
   Sparkles,
   Lock,
-  ArrowRight,
   Gift,
   CheckCircle2,
   ChevronLeft,
-  CreditCard,
-  Banknote,
   Tag,
   MapPin,
 } from "lucide-react";
@@ -30,29 +27,17 @@ function saveProfileToDevice(fields: CheckoutProfile, payment: string) {
   localStorage.setItem(checkoutProfileKey, JSON.stringify({ fields, payment, updatedAt: Date.now(), expiresAt: Date.now() + checkoutProfileLifetime }));
 }
 
-function checkoutAttribution() {
-  let referrer = sessionStorage.getItem("coc-referrer") || document.referrer || "";
-  let source = sessionStorage.getItem("coc-source") || "";
-  if (!source) {
-    try { source = referrer ? new URL(referrer).hostname : "direct"; } catch { source = "direct"; referrer = ""; }
-  }
-  return {
-    source,
-    medium: sessionStorage.getItem("coc-medium") || (source === "direct" ? "none" : "referral"),
-    campaign: sessionStorage.getItem("coc-campaign") || "none",
-    landingPage: sessionStorage.getItem("coc-landing") || `${window.location.pathname}${window.location.search}`,
-    referrer,
-    device: window.innerWidth < 768 ? "mobile" as const : window.innerWidth < 1100 ? "tablet" as const : "desktop" as const,
-  };
+function checkoutProgressPayload(fields: CheckoutProfile, paymentMethod: string, lastField?: CheckoutField) {
+  return JSON.stringify({ anonymousToken: getCartToken(), revision: nextCartRevision(), ...fields, paymentMethod, lastField, attribution: getCommerceAttribution() });
 }
 
-async function saveCheckoutProgress(fields: CheckoutProfile, lastField: CheckoutField, paymentMethod?: string) {
-  const response = await fetch("/api/cart/lead", {
+function saveCheckoutProgress(body: string) {
+  return fetch("/api/cart/lead", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ anonymousToken: getCartToken(), ...fields, paymentMethod, lastField, attribution: checkoutAttribution() }),
+    body,
+    keepalive: true,
   });
-  if (!response.ok) throw new Error("Unable to save checkout progress");
 }
 
 function loadRazorpayScript(): Promise<boolean> {
@@ -72,7 +57,7 @@ function loadRazorpayScript(): Promise<boolean> {
 export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [profile, setProfile] = useState<CheckoutProfile>(emptyProfile);
-  const [payment, setPayment] = useState("razorpay");
+  const payment = "razorpay";
   const [placed, setPlaced] = useState(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
   const [placedInvoiceUrl, setPlacedInvoiceUrl] = useState("");
@@ -84,29 +69,36 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const leadTimerRef = useRef<number | null>(null);
-  const checkoutTrackedRef = useRef(false);
+  const pendingLead = useRef<string | null>(null);
+  const profileRef = useRef(emptyProfile);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => {
-      setItems(getCartItems());
+      const cart = getCartItems();
+      setItems(cart);
+      let restored = emptyProfile;
       try {
         const saved = JSON.parse(localStorage.getItem(checkoutProfileKey) || "null") as { fields?: Partial<CheckoutProfile>; payment?: string; expiresAt?: number } | null;
         if (saved?.expiresAt && saved.expiresAt > Date.now() && saved.fields) {
-          const restored = { ...emptyProfile, ...saved.fields };
-          const restoredPayment = "razorpay";
+          restored = { ...emptyProfile, ...saved.fields };
+          profileRef.current = restored;
           setProfile(restored);
-          setPayment("razorpay");
-          if (Object.values(restored).some((value) => value && value !== "India")) saveCheckoutProgress(restored, "country", restoredPayment).catch(() => undefined);
         } else if (saved) localStorage.removeItem(checkoutProfileKey);
       } catch {
         localStorage.removeItem(checkoutProfileKey);
+      }
+      if (cart.length) {
+        void saveCheckoutProgress(checkoutProgressPayload(restored, "razorpay")).catch(() => undefined);
+        void syncCart(cart).then((rotated) => {
+          if (rotated) void saveCheckoutProgress(checkoutProgressPayload(profileRef.current, "razorpay")).catch(() => undefined);
+        }).catch(() => undefined);
       }
     }, 0);
     fetch("/api/storefront/settings")
       .then((response) => response.json())
       .then((data) => {
-        setFreeShippingThreshold(Number(data.freeShippingThreshold || 2999));
-        setShippingCharge(Number(data.shippingCharge || 149));
+        setFreeShippingThreshold(Number(data.freeShippingThreshold ?? 2999));
+        setShippingCharge(Number(data.shippingCharge ?? 149));
       })
       .catch(() => undefined);
     return () => window.clearTimeout(initialLoad);
@@ -118,13 +110,14 @@ export default function CheckoutPage() {
   const total = Math.max(subtotal - discount + shipping, 0);
 
   useEffect(() => {
-    if (!subtotal || checkoutTrackedRef.current) return;
-    checkoutTrackedRef.current = true;
-    trackCommerceEvent("checkout_started", { itemCount: items.reduce((sum, item) => sum + item.quantity, 0), subtotalInr: subtotal });
-  }, [items, subtotal]);
-
-  useEffect(() => () => {
-    if (leadTimerRef.current) window.clearTimeout(leadTimerRef.current);
+    const flush = () => {
+      if (leadTimerRef.current !== null) window.clearTimeout(leadTimerRef.current);
+      const body = pendingLead.current;
+      pendingLead.current = null;
+      if (body) void saveCheckoutProgress(body).catch(() => undefined);
+    };
+    window.addEventListener("pagehide", flush);
+    return () => { window.removeEventListener("pagehide", flush); flush(); };
   }, []);
 
   useEffect(() => {
@@ -203,11 +196,15 @@ export default function CheckoutPage() {
     localStorage.removeItem("coc-applied-coupon");
   };
 
-  const queueCheckoutSave = (fields: CheckoutProfile, lastField: CheckoutField, nextPayment = payment) => {
-    saveProfileToDevice(fields, nextPayment);
+  const queueCheckoutSave = (fields: CheckoutProfile, lastField: CheckoutField) => {
+    profileRef.current = fields;
+    saveProfileToDevice(fields, payment);
+    const body = checkoutProgressPayload(fields, payment, lastField);
+    pendingLead.current = body;
     if (leadTimerRef.current) window.clearTimeout(leadTimerRef.current);
     leadTimerRef.current = window.setTimeout(() => {
-      saveCheckoutProgress(fields, lastField, lastField === "paymentMethod" ? nextPayment : undefined).catch(() => undefined);
+      pendingLead.current = null;
+      void saveCheckoutProgress(body).catch(() => undefined);
     }, 500);
   };
 
@@ -216,7 +213,7 @@ export default function CheckoutPage() {
 
   const handlePostalCodeChange = async (val: string) => {
     const cleaned = val.replace(/\D/g, "").slice(0, 6);
-    const next = { ...profile, postalCode: cleaned };
+    const next = { ...profileRef.current, postalCode: cleaned };
     setProfile(next);
     queueCheckoutSave(next, "postalCode");
 
@@ -225,9 +222,10 @@ export default function CheckoutPage() {
       try {
         const res = await fetch(`/api/pincode/${cleaned}`);
         const data = await res.json();
+        if (profileRef.current.postalCode !== cleaned) return;
         if (data.success && data.city && data.state) {
           const updated = {
-            ...next,
+            ...profileRef.current,
             city: data.city,
             state: data.state,
           };
@@ -238,30 +236,30 @@ export default function CheckoutPage() {
           setPincodeStatus(null);
         }
       } catch {
-        setPincodeStatus(null);
+        if (profileRef.current.postalCode === cleaned) setPincodeStatus(null);
       } finally {
-        setPincodeLoading(false);
+        if (profileRef.current.postalCode === cleaned) setPincodeLoading(false);
       }
     } else {
+      setPincodeLoading(false);
       setPincodeStatus(null);
     }
   };
 
   const updateProfile = (field: keyof CheckoutProfile, value: string) => {
-    const next = { ...profile, [field]: value };
+    const next = { ...profileRef.current, [field]: value };
     setProfile(next);
     queueCheckoutSave(next, field);
   };
 
-  const updatePayment = (value: string) => {
-    setPayment(value);
-    queueCheckoutSave(profile, "paymentMethod", value);
-  };
-
   const placeOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!items.length) return;
+    if (!items.length || submitting) return;
     if (leadTimerRef.current) window.clearTimeout(leadTimerRef.current);
+    const pending = pendingLead.current;
+    pendingLead.current = null;
+    if (pending) void saveCheckoutProgress(pending).catch(() => undefined);
+    const cartToken = getCartToken();
     setSubmitting(true);
     setCheckoutError("");
 
@@ -285,8 +283,6 @@ export default function CheckoutPage() {
     });
 
     try {
-      await saveCheckoutProgress(profile, "paymentMethod", payment);
-
       // 1. Create order in backend
       const response = await fetch("/api/checkout", {
         method: "POST",
@@ -294,9 +290,11 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customer: { fullName, email, phone },
           address: { line1, line2, city, state, postalCode, country: "India" },
-          items: items.map((item) => ({ name: item.name, size: item.size, color: item.color, quantity: item.quantity })),
+          items: items.map(({ productId, name, size, color, quantity }) => ({ productId, name, size, color, quantity })),
           paymentMethod: payment,
-          cartToken: getCartToken(),
+          cartToken,
+          revision: nextCartRevision(),
+          attribution: getCommerceAttribution(),
           couponCode: couponCode || undefined,
           customerNote: giftUnlocked
             ? "Order includes 1 Free Luxury Festive Gift (Unlocked at ₹3,500+)"
@@ -313,6 +311,18 @@ export default function CheckoutPage() {
       }
 
       const orderNumber = data.orderNumber;
+      const finish = (invoiceUrl: string, method: string) => {
+        clearCartAfterCheckout(cartToken, items);
+        setPlacedOrderNumber(orderNumber);
+        setPlacedInvoiceUrl(invoiceUrl);
+        setPlacedPaymentMethod(method);
+        setPlaced(true);
+        setSubmitting(false);
+      };
+      if (["confirmed", "completed"].includes(data.status)) {
+        finish(data.invoiceUrl || "", "Razorpay (Online Payment)");
+        return;
+      }
 
       // 2. Razorpay Flow
       if (payment === "razorpay") {
@@ -321,10 +331,7 @@ export default function CheckoutPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             orderNumber,
-            amountInr: total,
-            customerName: fullName,
             customerEmail: email,
-            customerPhone: phone,
           }),
         });
 
@@ -336,31 +343,10 @@ export default function CheckoutPage() {
           return;
         }
 
-        if (rzpData.isDemo) {
-          // Sandbox Demo Mode
-          const verifyRes = await fetch("/api/payments/razorpay/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orderNumber,
-              razorpay_order_id: rzpData.razorpayOrderId,
-              razorpay_payment_id: "pay_demo_" + Date.now(),
-              isDemo: true,
-            }),
-          });
-          const verifyData = await verifyRes.json();
-          clearCartAfterCheckout();
-          setPlacedOrderNumber(orderNumber);
-          setPlacedInvoiceUrl(verifyData.invoiceUrl || data.invoiceUrl || "");
-          setPlacedPaymentMethod("Razorpay (Sandbox Verified)");
-          setPlaced(true);
-          setSubmitting(false);
-          return;
-        }
-
         // Live / Test Razorpay Modal
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded) {
+          trackCommerceEvent("checkout_failed", { stage: "payment_script" });
           setCheckoutError("Payment gateway script could not be loaded. Please check your internet connection.");
           setSubmitting(false);
           return;
@@ -374,7 +360,7 @@ export default function CheckoutPage() {
 
         const options = {
           key: rzpData.keyId,
-          amount: Math.round(total * 100),
+          amount: Math.round(Number(rzpData.amountInr) * 100),
           currency: rzpData.currency || "INR",
           name: "Carnival of Clothes",
           description: `Order ${orderNumber}`,
@@ -382,7 +368,7 @@ export default function CheckoutPage() {
           order_id: rzpData.razorpayOrderId,
           handler: async function (resp: RazorpayResponse) {
             try {
-              const verifyRes = await fetch("/api/payments/razorpay/verify", {
+              const verify = () => fetch("/api/payments/razorpay/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -390,20 +376,25 @@ export default function CheckoutPage() {
                   razorpay_order_id: resp.razorpay_order_id,
                   razorpay_payment_id: resp.razorpay_payment_id,
                   razorpay_signature: resp.razorpay_signature,
-                  isDemo: false,
                 }),
               });
+              let verifyRes = await verify();
+              for (let retry = 0; verifyRes.status === 202 && retry < 3; retry++) {
+                await new Promise((resolve) => window.setTimeout(resolve, 1200));
+                verifyRes = await verify();
+              }
               const verifyData = await verifyRes.json();
+              if (verifyRes.status === 202) {
+                setCheckoutError(`Payment confirmation is still processing. Check Track Order with reference ${orderNumber}.`);
+                return;
+              }
               if (!verifyRes.ok) {
+                trackCommerceEvent("checkout_failed", { stage: "payment_verification", status: verifyRes.status });
                 setCheckoutError(verifyData.error || "Payment verification failed. Please contact support.");
                 setSubmitting(false);
                 return;
               }
-              clearCartAfterCheckout();
-              setPlacedOrderNumber(orderNumber);
-              setPlacedInvoiceUrl(verifyData.invoiceUrl || data.invoiceUrl || "");
-              setPlacedPaymentMethod("Razorpay (Online Payment)");
-              setPlaced(true);
+              finish(verifyData.invoiceUrl || "", "Razorpay (Online Payment)");
             } catch {
               setCheckoutError("Payment was captured, but confirmation is syncing. Reference: " + orderNumber);
             } finally {
@@ -420,6 +411,7 @@ export default function CheckoutPage() {
           },
           modal: {
             ondismiss: function () {
+              trackCommerceEvent("checkout_failed", { stage: "payment_dismissed" });
               setSubmitting(false);
               setCheckoutError("Payment was not completed. You can retry paying online.");
             },
@@ -428,17 +420,13 @@ export default function CheckoutPage() {
 
         const rzp = new (window as unknown as { Razorpay: new (opts: typeof options) => { open: () => void; on: (event: string, cb: (e: { error?: { description?: string } }) => void) => void } }).Razorpay(options);
         rzp.on("payment.failed", function (resp: { error?: { description?: string } }) {
+          trackCommerceEvent("checkout_failed", { stage: "payment_failed" });
           setSubmitting(false);
           setCheckoutError(resp.error?.description || "Payment failed. Please try again with another card or UPI.");
         });
         rzp.open();
       } else {
-        // Cash on Delivery
-        clearCartAfterCheckout();
-        setPlacedOrderNumber(orderNumber);
-        setPlacedInvoiceUrl(data.invoiceUrl || "");
-        setPlacedPaymentMethod("Cash on Delivery");
-        setPlaced(true);
+        setCheckoutError("This checkout did not return a payment session.");
         setSubmitting(false);
       }
     } catch {
@@ -494,7 +482,7 @@ export default function CheckoutPage() {
           )}
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <a href={`/track-order?order=${placedOrderNumber}`} className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#ebdcd0] bg-[#fffaf8] px-6 text-xs font-semibold text-[#7e3d38] transition hover:border-[#ba6a64] hover:bg-[#fdf6f2]">
+            <a data-commerce-action="track_order" href={`/track-order?order=${placedOrderNumber}`} className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#ebdcd0] bg-[#fffaf8] px-6 text-xs font-semibold text-[#7e3d38] transition hover:border-[#ba6a64] hover:bg-[#fdf6f2]">
               Track order status →
             </a>
             {placedInvoiceUrl && (
@@ -849,7 +837,7 @@ export default function CheckoutPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={removeCouponCode}
+                      onClick={removeCouponCode} data-commerce-action="remove_coupon"
                       className="text-[11px] font-semibold text-[#d32f2f] hover:underline cursor-pointer"
                     >
                       Remove
@@ -867,6 +855,7 @@ export default function CheckoutPage() {
                     <button
                       type="button"
                       onClick={() => applyCouponCode(couponInput)}
+                      data-commerce-action="apply_coupon"
                       disabled={validatingCoupon || !couponInput.trim()}
                       className="rounded-xl border border-[#ba6a64] bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#ba6a64] transition hover:bg-[#ba6a64] hover:text-white disabled:opacity-50 cursor-pointer"
                     >
@@ -914,7 +903,7 @@ export default function CheckoutPage() {
 
               {/* Submit CTA Button */}
               <button
-                type="submit"
+                type="submit" data-commerce-action="place_order"
                 disabled={submitting}
                 className="checkout-submit-btn"
                 style={{

@@ -1,0 +1,16 @@
+export const commerceActionLabels = {
+  open_cart: "Open shopping bag",
+  add_to_cart: "Add to bag",
+  choose_size: "Open size picker",
+  buy_now: "Buy now",
+  start_checkout: "Proceed to checkout",
+  place_order: "Place order",
+  apply_coupon: "Apply coupon",
+  remove_coupon: "Remove coupon",
+  search: "Open search",
+  open_menu: "Open navigation menu",
+  account: "Open account",
+  write_review: "Write a review",
+  track_order: "Track order",
+  whatsapp: "Open WhatsApp",
+} as const;

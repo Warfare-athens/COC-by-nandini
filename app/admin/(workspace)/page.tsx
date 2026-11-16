@@ -1,5 +1,5 @@
-import AdminDashboardControls from "@/app/components/AdminDashboardControls";
 import { adminDashboardData } from "@/lib/commerce";
+import { getAdminDays } from "@/lib/admin-time-server";
 import { ChartNoAxesCombined, CircleCheck, ShoppingBag, Target, TriangleAlert, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -28,9 +28,7 @@ function FunnelRow({ label, value, width }: { label: string; value: number; widt
 }
 
 export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  const query = await searchParams;
-  const requestedDays = Number(query.days || 30);
-  const days = [1, 7, 30, 90].includes(requestedDays) ? requestedDays : 30;
+  const days = await getAdminDays((await searchParams).days);
   const data = await adminDashboardData(days);
   const funnelValues = [data.visitors, data.cartVisitors, data.addToCarts, data.checkoutDrafts, data.whatsappStarted, data.orderCount];
   const funnelMax = Math.max(...funnelValues, 1);
@@ -38,19 +36,12 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
   return (
     <>
       <section className="admin-command-center">
-        <header className="command-header">
-          <div>
-            <span>Daily operating view</span>
-            <h1>Command Center</h1>
-            <p>Revenue, funnel leakage, source quality, demand, and customer signals in one working view.</p>
-          </div>
-          <AdminDashboardControls days={days} />
-        </header>
+        <h1 className="sr-only">Overview</h1>
 
         {!data.configured && <div className="command-alert">Supabase is not connected. Add the database environment variables to activate live reporting.</div>}
 
         <div className="command-metrics">
-          <MetricCard label="Revenue" value={money(data.revenue)} note={`${data.orderCount} non-cancelled orders`} icon={<TrendingUp size={18} />} />
+          <MetricCard label="Confirmed order value" value={money(data.revenue)} note={`${data.orderCount} confirmed orders`} icon={<TrendingUp size={18} />} />
           <MetricCard label="Average order" value={money(data.averageOrder)} note={`${data.deliveredOrders} delivered orders`} icon={<ShoppingBag size={18} />} />
           <MetricCard label="Abandoned value" value={money(data.abandonedValue)} note={`${data.recoverableCarts} recoverable cart lead${data.recoverableCarts === 1 ? "" : "s"}`} tone="warning" icon={<TriangleAlert size={18} />} />
           <MetricCard label="Conversion" value={percent(data.conversion)} note={`${data.visitors} visitors to ${data.orderCount} orders`} tone="success" icon={<Target size={18} />} />
@@ -58,36 +49,36 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
 
         <div className="command-work-grid">
           <section className="command-panel">
-            <div className="command-panel-head"><div><h2>Morning Run List</h2><p>The jobs that move money today.</p></div><span aria-hidden="true"><CircleCheck size={18} /></span></div>
+            <div className="command-panel-head"><h2>To do</h2><span aria-hidden="true"><CircleCheck size={18} /></span></div>
             <div className="command-run-list">
               <RunItem href="/admin/cart-leads" title="Recover checkout leads" note={`${money(data.abandonedValue)} recoverable value`} value={String(data.recoverableCarts)} tone="warning" />
               <RunItem href="/admin/orders" title="Move open orders" note="Confirmed, processing, or shipped orders still active" value={String(data.openOrders)} tone="success" />
-              <RunItem href="/admin/checkouts" title="Fix funnel leaks" note="Checkout draft to order conversion" value={percent(data.checkoutToOrder)} />
+              <RunItem href="/admin/checkouts" title="Review checkouts" note="Checkout-to-order conversion" value={percent(data.checkoutToOrder)} />
               <RunItem href="/admin/products" title="Restock inventory" note="Active variants at or below the low-stock threshold" value={String(data.lowStockCount)} tone="warning" />
             </div>
           </section>
 
           <section className="command-panel">
-            <div className="command-panel-head"><div><h2>Conversion Funnel</h2><p>Where demand turns into orders.</p></div><span aria-hidden="true"><ChartNoAxesCombined size={18} /></span></div>
+            <div className="command-panel-head"><h2>Conversion Funnel</h2><span aria-hidden="true"><ChartNoAxesCombined size={18} /></span></div>
             <div className="command-funnel">
               <FunnelRow label="Visitors" value={data.visitors} width={data.visitors / funnelMax * 100} />
               <FunnelRow label="Cart visitors" value={data.cartVisitors} width={data.cartVisitors / funnelMax * 100} />
               <FunnelRow label="Add to carts" value={data.addToCarts} width={data.addToCarts / funnelMax * 100} />
-              <FunnelRow label="Checkout drafts" value={data.checkoutDrafts} width={data.checkoutDrafts / funnelMax * 100} />
+              <FunnelRow label="Checkout starts" value={data.checkoutDrafts} width={data.checkoutDrafts / funnelMax * 100} />
               <FunnelRow label="WhatsApp started" value={data.whatsappStarted} width={data.whatsappStarted / funnelMax * 100} />
               <FunnelRow label="Orders" value={data.orderCount} width={data.orderCount / funnelMax * 100} />
             </div>
             <div className="command-ratios">
               <div><span>Visitor to cart</span><strong>{percent(data.visitorToCart)}</strong></div>
               <div><span>Cart to draft</span><strong>{percent(data.cartToCheckout)}</strong></div>
-              <div><span>Draft to order</span><strong>{percent(data.checkoutToOrder)}</strong></div>
+              <div><span>Checkout to order</span><strong>{percent(data.checkoutToOrder)}</strong></div>
               <div><span>Visitor to order</span><strong>{percent(data.conversion)}</strong></div>
             </div>
           </section>
         </div>
 
         <section className="command-panel command-orders">
-          <div className="command-panel-head"><div><h2>Live Order Queue</h2><p>The newest orders inside this reporting window.</p></div><a href="/admin/orders">View all →</a></div>
+          <div className="command-panel-head"><h2>Recent orders</h2><a href="/admin/orders">View all →</a></div>
           <div className="command-table-wrap">
             <table>
               <thead><tr><th>Order</th><th>Customer</th><th>Payment</th><th>Fulfillment</th><th>Total</th><th /></tr></thead>

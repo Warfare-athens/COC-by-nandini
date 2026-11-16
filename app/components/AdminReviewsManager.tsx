@@ -67,7 +67,7 @@ export default function AdminReviewsManager({ initialReviews, products }: { init
   return <>
     <div className="admin-review-actions"><button className="admin-small-button primary" type="button" onClick={openCreate}>Add review</button></div>
     {(editing || form.productId) && <form className="admin-review-editor" onSubmit={save}>
-      <div className="admin-review-editor-head"><div><h3>{editing ? "Edit review" : "Add review"}</h3><p>Remove abusive content or correct customer review details before publishing.</p></div><button type="button" className="admin-small-button" onClick={() => { setEditing(null); setForm(emptyForm); }}>Cancel</button></div>
+      <div className="admin-review-editor-head"><h3>{editing ? "Edit review" : "Add review"}</h3><button type="button" className="admin-small-button" onClick={() => { setEditing(null); setForm(emptyForm); }}>Cancel</button></div>
       <div className="admin-form-grid">
         <label className="admin-field"><span>Product</span><UniversalSelect value={form.productId} onChange={(event) => updateField("productId", event.target.value)} required>{products.map((product) => <option value={product.id} key={product.id}>{product.name}</option>)}</UniversalSelect></label>
         <label className="admin-field"><span>Reviewer name</span><input value={form.customerName} onChange={(event) => updateField("customerName", event.target.value)} required /></label>

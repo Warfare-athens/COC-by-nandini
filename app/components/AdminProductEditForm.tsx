@@ -912,7 +912,6 @@ export default function AdminProductEditForm({
         <div className="admin-editor-title">
           <div>
             <h2>Product reviews</h2>
-            <p>Approved reviews appear on the product page. Moderate all submissions from the Reviews panel.</p>
           </div>
           <a className="admin-link" href="/admin/reviews">Open Reviews</a>
         </div>
@@ -922,7 +921,7 @@ export default function AdminProductEditForm({
           {review.title && <b>{review.title}</b>}
           <p>{review.body}</p>
           {review.image_url && <img src={review.image_url} alt={`Review from ${review.customer_name}`} />}
-        </article>)}</div> : <div className="admin-empty-state"><h3>No reviews yet</h3><p>Customer reviews for this product will appear here after submission.</p></div>}
+        </article>)}</div> : <div className="admin-empty-state"><h3>No reviews yet</h3></div>}
       </section>
       {notice && <div className="admin-notice">{notice}</div>}
       {error && <div className="admin-error">{error}</div>}
